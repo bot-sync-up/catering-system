@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "ענה את השואל",
+    "slug": "aneh-hashoel",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "anehhashoel",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.moreshet.anehhashoel"
+    },
+    "android": {
+      "package": "org.moreshet.anehhashoel"
+    },
+    "plugins": ["expo-router"]
+  }
+}
