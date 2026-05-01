@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@aneh/ui": ["../../packages/ui/src"],
+      "@aneh/api": ["../../packages/api/src"],
+      "@aneh/db": ["../../packages/db/src"],
+      "@aneh/auth": ["../../packages/auth/src"],
+      "@aneh/utils": ["../../packages/utils/src"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
+}
