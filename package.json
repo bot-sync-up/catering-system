@@ -1,0 +1,19 @@
+{
+  "name": "invoice-ocr-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm -ws --if-present run build",
+    "test": "npm -ws --if-present run test",
+    "dev:api": "npm -w apps/api run dev",
+    "dev:web": "npm -w apps/web-verify run dev",
+    "worker": "npm -w @invoice-ocr/integrations-ocr run worker"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
