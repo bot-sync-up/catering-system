@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { height: 100%; }
+body {
+  font-family: 'Rubik', 'Heebo', 'Assistant', system-ui, sans-serif;
+  background: #fafaf9;
+  color: #1c1917;
+}
+
+/* Print sheet for prep pages */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .print-page { page-break-after: always; }
+  @page { size: A4; margin: 14mm; }
+}
+
+.btn { @apply px-3 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition; }
+.btn-ghost { @apply px-3 py-2 rounded-lg text-sm border border-stone-300 hover:bg-stone-100; }
+.card { @apply bg-white rounded-2xl shadow-sm border border-stone-200 p-4; }
+.input { @apply w-full px-3 py-2 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white; }
+.label { @apply block text-sm font-medium text-stone-700 mb-1; }
+.tag { @apply inline-block text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-700; }
+.tag-vip { @apply bg-amber-100 text-amber-800; }
+.tag-basic { @apply bg-sky-100 text-sky-800; }
+
+/* Gantt */
+.gantt-row { @apply relative h-9 border-b border-stone-100; }
+.gantt-bar {
+  @apply absolute h-7 top-1 rounded-md text-xs text-white flex items-center px-2 overflow-hidden whitespace-nowrap shadow;
+}
