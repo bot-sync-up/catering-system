@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מערכת לוגיסטיקה ומשלוחים</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">[L]</span>
+      <h1>מערכת לוגיסטיקה ומשלוחים</h1>
+    </div>
+    <nav class="main-nav">
+      <a href="#dashboard" data-tab="dashboard" class="active">לוח בקרה</a>
+      <a href="#deliveries" data-tab="deliveries">משלוחים</a>
+      <a href="#drivers" data-tab="drivers">נהגים</a>
+      <a href="#vehicles" data-tab="vehicles">צי רכב</a>
+      <a href="#contractors" data-tab="contractors">קבלנים</a>
+      <a href="#geofences" data-tab="geofences">גיאופנסינג</a>
+      <a href="#proof" data-tab="proof">תיעוד מסירה</a>
+    </nav>
+  </header>
+
+  <main id="content">
+    <!-- Dashboard -->
+    <section id="tab-dashboard" class="tab active">
+      <h2>לוח בקרה</h2>
+      <div class="stats-grid" id="stats"></div>
+
+      <div class="card">
+        <h3>משלוחים אחרונים</h3>
+        <table id="recent-deliveries" class="data-table">
+          <thead>
+            <tr>
+              <th>הזמנה</th>
+              <th>לקוח</th>
+              <th>כתובת</th>
+              <th>נהג</th>
+              <th>סטטוס</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Deliveries -->
+    <section id="tab-deliveries" class="tab">
+      <h2>ניהול משלוחים</h2>
+      <button class="btn btn-primary" id="btn-new-delivery">+ משלוח חדש</button>
+
+      <div class="filters">
+        <select id="filter-status">
+          <option value="">כל הסטטוסים</option>
+          <option value="pending">ממתין</option>
+          <option value="assigned">משובץ</option>
+          <option value="en_route">בדרך</option>
+          <option value="arrived">הגיע</option>
+          <option value="delivered">נמסר</option>
+          <option value="failed">נכשל</option>
+          <option value="cancelled">בוטל</option>
+        </select>
+      </div>
+
+      <table class="data-table" id="deliveries-table">
+        <thead>
+          <tr>
+            <th>הזמנה</th>
+            <th>לקוח</th>
+            <th>טלפון</th>
+            <th>איסוף</th>
+            <th>יעד</th>
+            <th>נהג</th>
+            <th>סטטוס</th>
+            <th>פעולות</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Drivers -->
+    <section id="tab-drivers" class="tab">
+      <h2>ניהול נהגים</h2>
+      <button class="btn btn-primary" id="btn-new-driver">+ נהג חדש</button>
+      <table class="data-table" id="drivers-table">
+        <thead>
+          <tr>
+            <th>שם</th>
+            <th>טלפון</th>
+            <th>סוג</th>
+            <th>חברה</th>
+            <th>רכב</th>
+            <th>דירוג</th>
+            <th>סה"כ משלוחים</th>
+            <th>סטטוס</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Vehicles -->
+    <section id="tab-vehicles" class="tab">
+      <h2>צי הרכב</h2>
+      <button class="btn btn-primary" id="btn-new-vehicle">+ רכב חדש</button>
+      <table class="data-table" id="vehicles-table">
+        <thead>
+          <tr>
+            <th>מספר רישוי</th>
+            <th>יצרן</th>
+            <th>דגם</th>
+            <th>שנה</th>
+            <th>קיבולת (ק"ג)</th>
+            <th>ק"מ</th>
+            <th>סטטוס</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Contractors -->
+    <section id="tab-contractors" class="tab">
+      <h2>קבלני נהגים וחשבוניות</h2>
+      <div class="card">
+        <h3>קבלנים פעילים</h3>
+        <table class="data-table" id="contractors-table">
+          <thead>
+            <tr>
+              <th>שם</th>
+              <th>חברה</th>
+              <th>טלפון</th>
+              <th>תעריף למשלוח</th>
+              <th>דירוג</th>
+              <th>סה"כ משלוחים</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>חשבוניות</h3>
+        <table class="data-table" id="invoices-table">
+          <thead>
+            <tr>
+              <th>מספר</th>
+              <th>קבלן</th>
+              <th>תקופה</th>
+              <th>משלוחים</th>
+              <th>סכום (ללא מע"מ)</th>
+              <th>מע"מ</th>
+              <th>סטטוס</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Geofences -->
+    <section id="tab-geofences" class="tab">
+      <h2>אזורי גיאופנסינג</h2>
+      <button class="btn btn-primary" id="btn-new-geofence">+ אזור חדש</button>
+      <table class="data-table" id="geofences-table">
+        <thead>
+          <tr>
+            <th>שם</th>
+            <th>סוג</th>
+            <th>מרכז</th>
+            <th>רדיוס (מ')</th>
+            <th>טריגר</th>
+            <th>פעיל</th>
+            <th>פעולות</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Proof of Delivery -->
+    <section id="tab-proof" class="tab">
+      <h2>תיעוד מסירה</h2>
+      <p class="muted">בחר משלוח לתיעוד:</p>
+      <select id="proof-delivery-select"></select>
+
+      <div id="proof-form" style="display:none">
+        <div class="proof-grid">
+          <div class="card">
+            <h3>חתימת מקבל</h3>
+            <canvas id="signature-canvas" width="400" height="200"></canvas>
+            <div class="canvas-actions">
+              <button class="btn" id="clear-signature">נקה</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>תמונת מסירה</h3>
+            <input type="file" id="proof-photo" accept="image/*" capture="environment">
+            <img id="photo-preview" style="max-width:100%; display:none; margin-top:10px;">
+          </div>
+
+          <div class="card">
+            <h3>פרטי המקבל</h3>
+            <label>שם המקבל</label>
+            <input type="text" id="recipient-name" placeholder="שם מלא">
+            <label>תעודת זהות</label>
+            <input type="text" id="recipient-id" placeholder="מספר ת.ז.">
+            <label>הערות</label>
+            <textarea id="proof-notes" rows="3"></textarea>
+          </div>
+
+          <div class="card">
+            <h3>מיקום GPS</h3>
+            <div id="gps-info" class="muted">לוקח מיקום...</div>
+            <button class="btn" id="refresh-gps">רענן מיקום</button>
+          </div>
+        </div>
+
+        <button class="btn btn-success btn-large" id="submit-proof">שמור תיעוד מסירה</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal דיאלוג כללי -->
+  <div id="modal" class="modal" style="display:none">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <button class="modal-close">X</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/signature.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
