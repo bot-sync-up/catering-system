@@ -1,0 +1,116 @@
+# תיקון #11 - JWT 7d → 15min + Refresh Token
+# קובץ יעד: agent-a50ad709234b49b0b/server/src/middleware/auth.ts (שורה 20-21)
+# בעיה: token חיים 7 ימים — אם נגנב, התוקף מקבל שבוע גישה.
+#       OWASP מצביעים על access token TTL מקסימלי של 15 דקות.
+# פתרון:
+#   1) Access token = 15 דקות, signed עם JWT_SECRET.
+#   2) Refresh token = 7 ימים, signed עם JWT_REFRESH_SECRET (מפתח נפרד!).
+#   3) Refresh נשמר כ-HttpOnly cookie + רישום ב-DB (revocable).
+#   4) Endpoint POST /auth/refresh.
+
+--- a/agent-a50ad709234b49b0b/server/src/middleware/auth.ts
++++ b/agent-a50ad709234b49b0b/server/src/middleware/auth.ts
+@@ -1,5 +1,6 @@
+ import type { Request, Response, NextFunction } from "express";
+ import jwt from "jsonwebtoken";
++import crypto from "node:crypto";
+ import type { Role } from "@prisma/client";
+
+ export interface AuthPayload {
+@@ -8,6 +9,11 @@ export interface AuthPayload {
+   employeeId?: string;
+ }
+
++export interface RefreshPayload {
++  userId: string;
++  tokenId: string;  // jti - מאפשר revoke ספציפי
++}
++
+ declare global {
+   // eslint-disable-next-line @typescript-eslint/no-namespace
+   namespace Express {
+@@ -17,8 +23,27 @@ declare global {
+   }
+ }
+
+-export function signToken(payload: AuthPayload): string {
+-  return jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn: "7d" });
++const ACCESS_TTL = process.env.JWT_ACCESS_TTL ?? "15m";
++const REFRESH_TTL = process.env.JWT_REFRESH_TTL ?? "7d";
++
++export function signAccessToken(payload: AuthPayload): string {
++  // access token קצר טווח (15 דקות) — חתום על מפתח רגיל
++  return jwt.sign(payload, process.env.JWT_SECRET!, {
++    expiresIn: ACCESS_TTL,
++    issuer: "finance-app",
++  });
++}
++
++export function signRefreshToken(userId: string): { token: string; tokenId: string } {
++  const tokenId = crypto.randomUUID();
++  const token = jwt.sign(
++    { userId, tokenId } satisfies RefreshPayload,
++    process.env.JWT_REFRESH_SECRET!,
++    { expiresIn: REFRESH_TTL, issuer: "finance-app" },
++  );
++  return { token, tokenId };
++}
++
++/** תאימות לאחור — לא מומלץ לשימוש חדש */
++export function signToken(payload: AuthPayload): string {
++  return signAccessToken(payload);
+ }
+
+ export function requireAuth(req: Request, res: Response, next: NextFunction) {
+@@ -33,3 +58,14 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
+     return res.status(401).json({ error: "token לא תקף" });
+   }
+ }
++
++export function verifyRefreshToken(token: string): RefreshPayload {
++  return jwt.verify(token, process.env.JWT_REFRESH_SECRET!, {
++    issuer: "finance-app",
++  }) as RefreshPayload;
++}
+
+
+# ----------------------------------------------------------------
+# הוסף route חדש: server/src/routes/auth.ts
+# ----------------------------------------------------------------
++authRouter.post("/refresh", async (req, res) => {
++  const refreshTokenCookie = req.cookies?.refreshToken;
++  if (!refreshTokenCookie) {
++    return res.status(401).json({ error: "אין refresh token" });
++  }
++  try {
++    const decoded = verifyRefreshToken(refreshTokenCookie);
++    // אימות שה-tokenId לא בוטל ב-DB:
++    const dbToken = await prisma.refreshToken.findUnique({
++      where: { tokenId: decoded.tokenId },
++    });
++    if (!dbToken || dbToken.revokedAt) {
++      return res.status(401).json({ error: "refresh token לא תקף" });
++    }
++    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
++    if (!user) return res.status(401).json({ error: "משתמש לא קיים" });
++    const access = signAccessToken({ userId: user.id, role: user.role });
++    return res.json({ accessToken: access });
++  } catch {
++    return res.status(401).json({ error: "refresh token לא תקף" });
++  }
++});
++
++authRouter.post("/logout", async (req, res) => {
++  const refreshTokenCookie = req.cookies?.refreshToken;
++  if (refreshTokenCookie) {
++    try {
++      const decoded = verifyRefreshToken(refreshTokenCookie);
++      await prisma.refreshToken.update({
++        where: { tokenId: decoded.tokenId },
++        data: { revokedAt: new Date() },
++      });
++    } catch { /* ignore */ }
++  }
++  res.clearCookie("refreshToken", { httpOnly: true, secure: true, sameSite: "strict" });
++  return res.status(204).end();
++});

@@ -1,0 +1,35 @@
+# תיקון #8 - OTP: Math.random → crypto.randomInt
+# קובץ יעד: agent-aecddcb45d3db0342/apps/customer-portal/src/lib/auth.ts
+# בעיה:
+#   1) Math.random() אינו cryptographically secure → ניתן לחזות OTP.
+#   2) console.log חושף את ה-OTP בלוגים (CRITICAL).
+# פתרון:
+#   1) crypto.randomInt(100000, 1000000) — מבטיח אקראיות חזקה.
+#   2) הסרת console.log לחלוטין. בפרודקשן — שליחה דרך SMS/email provider.
+
+--- a/agent-aecddcb45d3db0342/apps/customer-portal/src/lib/auth.ts
++++ b/agent-aecddcb45d3db0342/apps/customer-portal/src/lib/auth.ts
+@@ -1,16 +1,17 @@
+ import { db, uid, type User } from './store';
++import crypto from 'node:crypto';
+
+ export function generateOtp(email: string): string {
+-  // Demo: generate 6-digit code, valid 10 min.
+-  const code = String(Math.floor(100000 + Math.random() * 900000));
++  // Cryptographically-secure 6-digit OTP, valid 10 min.
++  // crypto.randomInt טווח [min, max) → 100000..999999.
++  const code = String(crypto.randomInt(100000, 1_000_000));
+   db().otps.set(email.toLowerCase(), {
+     email: email.toLowerCase(),
+     code,
+     expiresAt: Date.now() + 10 * 60 * 1000
+   });
+-  // In production: send via SMS/email provider.
+-  // For demo we log the code so that QA can use it.
+-  // eslint-disable-next-line no-console
+-  console.log(`[OTP] ${email} -> ${code}`);
++  // Production: send via SMS/email provider here.
++  // אסור ללוג את ה-OTP — מהווה דליפת secret למערכות לוגים מרוכזות.
++  // אם נדרש debug בסביבת DEV — לחבר provider mock שמדפיס לסטדאאוט מקומי בלבד.
+   return code;
+ }

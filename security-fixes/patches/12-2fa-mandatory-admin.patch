@@ -1,0 +1,124 @@
+# תיקון #12 - 2FA חובה למנהלים
+# קובץ יעד: agent-a50ad709234b49b0b/server/src/routes/auth.ts
+#         + agent-a50ad709234b49b0b/server/src/middleware/auth.ts
+# בעיה: admin/HR/MANAGER מקבלים גישה רחבה (כספים, שכר, נתוני עובדים)
+#       בלי 2FA. גניבת סיסמה → השתלטות מלאה.
+# פתרון:
+#   1) שדה twoFactorEnabled / twoFactorSecret במודל User.
+#   2) שלב login: אם role admin && !twoFactorEnabled → לחסום עם הודעה
+#      "חייב להגדיר 2FA לפני שאתה יכול להמשיך — POST /auth/2fa/setup".
+#   3) Verify endpoint שמקבל TOTP בנוסף לסיסמה.
+
+# ----------------------------------------------------------------
+# 1) Prisma schema — הוסף שדות:
+# ----------------------------------------------------------------
+# model User {
+#   ...
++#   twoFactorEnabled  Boolean   @default(false)
++#   twoFactorSecret   String?   // base32; להצפין ב-KMS
++#   twoFactorBackupCodes String[] @default([]) // 10 קודים חד-פעמיים
+# }
+
+
+# ----------------------------------------------------------------
+# 2) middleware/auth.ts — להוסיף enforcement:
+# ----------------------------------------------------------------
++import type { User } from "@prisma/client";
++
++const ROLES_REQUIRE_2FA: Role[] = ["ADMIN", "HR", "MANAGER"];
++
++/** Throw אם המשתמש חייב 2FA ולא הגדיר */
++export function enforce2FARequirement(user: Pick<User, "role" | "twoFactorEnabled">): void {
++  if (ROLES_REQUIRE_2FA.includes(user.role) && !user.twoFactorEnabled) {
++    const err = new Error("2FA חובה לתפקיד זה — יש להגדיר ב-/auth/2fa/setup");
++    (err as Error & { code?: string }).code = "TWO_FACTOR_SETUP_REQUIRED";
++    throw err;
++  }
++}
+
+
+# ----------------------------------------------------------------
+# 3) routes/auth.ts — login flow מעודכן:
+# ----------------------------------------------------------------
+ authRouter.post("/login", async (req, res) => {
+   const body = z.object({
+     email: z.string().email(),
+     password: z.string().min(8),
++    totpCode: z.string().regex(/^\d{6}$/).optional(),
++    backupCode: z.string().optional(),
+   }).parse(req.body);
+
+   const user = await prisma.user.findUnique({ where: { email: body.email } });
+   if (!user) return res.status(401).json({ error: "אימייל או סיסמה שגויים" });
+   const ok = await bcrypt.compare(body.password, user.passwordHash);
+   if (!ok) return res.status(401).json({ error: "אימייל או סיסמה שגויים" });
+
++  // אכיפת 2FA חובה למנהלים
++  try {
++    enforce2FARequirement(user);
++  } catch (err) {
++    if ((err as Error & { code?: string }).code === "TWO_FACTOR_SETUP_REQUIRED") {
++      return res.status(403).json({
++        error: (err as Error).message,
++        code: "TWO_FACTOR_SETUP_REQUIRED",
++        setupUrl: "/auth/2fa/setup",
++      });
++    }
++    throw err;
++  }
++
++  // אם משתמש הפעיל 2FA — חובה לאמת TOTP
++  if (user.twoFactorEnabled) {
++    if (!body.totpCode && !body.backupCode) {
++      return res.status(401).json({
++        error: "נדרש קוד 2FA",
++        code: "TWO_FACTOR_REQUIRED",
++      });
++    }
++    const valid =
++      (body.totpCode && verifyTotp(user.twoFactorSecret!, body.totpCode)) ||
++      (body.backupCode && (await consumeBackupCode(user.id, body.backupCode)));
++    if (!valid) {
++      return res.status(401).json({ error: "קוד 2FA שגוי" });
++    }
++  }
++
+   const token = signAccessToken({ userId: user.id, role: user.role, employeeId: user.employeeId ?? undefined });
+   res.json({ token });
+ });
+
+
+# ----------------------------------------------------------------
+# 4) הוספת dependency:
+#    npm i otplib
+# 5) helpers (לדוגמה — להניח ב-server/src/services/totp.ts):
+# ----------------------------------------------------------------
++import { authenticator } from "otplib";
++import crypto from "node:crypto";
++
++authenticator.options = { window: 1 }; // ±30 שניות
++
++export function generateTotpSecret(): string {
++  return authenticator.generateSecret(32);
++}
++
++export function verifyTotp(secret: string, code: string): boolean {
++  return authenticator.verify({ token: code, secret });
++}
++
++export function generateBackupCodes(count = 10): string[] {
++  return Array.from({ length: count }, () =>
++    crypto.randomBytes(5).toString("hex").toUpperCase().match(/.{1,5}/g)!.join("-"),
++  );
++}
++
++export async function consumeBackupCode(userId: string, code: string): Promise<boolean> {
++  const user = await prisma.user.findUnique({ where: { id: userId } });
++  if (!user) return false;
++  const idx = user.twoFactorBackupCodes.indexOf(code.toUpperCase().trim());
++  if (idx < 0) return false;
++  const next = [...user.twoFactorBackupCodes];
++  next.splice(idx, 1);
++  await prisma.user.update({ where: { id: userId }, data: { twoFactorBackupCodes: next } });
++  return true;
++}

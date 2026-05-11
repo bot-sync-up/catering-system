@@ -1,0 +1,25 @@
+# תיקון #1 (המשך) - מע"מ 17% → 18% ב-LineItemSchema
+# קובץ יעד: agent-accb121134afd7c1a/packages/integrations/icount/src/types/index.ts
+# שורה 91: ערך ברירת המחדל של vatRate היה 17 - עודכן ל-18
+# גם הקומנט שעליו ב-VATType.STANDARD (שורה 55) עודכן
+
+--- a/agent-accb121134afd7c1a/packages/integrations/icount/src/types/index.ts
++++ b/agent-accb121134afd7c1a/packages/integrations/icount/src/types/index.ts
+@@ -52,7 +52,7 @@ export enum PaymentMethod {
+ }
+
+ export enum VATType {
+-  STANDARD = 'standard',     // מע"מ רגיל 17%
++  STANDARD = 'standard',     // מע"מ רגיל 18% (מ-01/01/2025)
+   EXEMPT = 'exempt',         // פטור ממע"מ
+   ZERO = 'zero',             // אפס מע"מ
+   NOT_INCLUDED = 'not_included', // לא כולל מע"מ
+@@ -88,7 +88,7 @@ export const LineItemSchema = z.object({
+   unitPrice: z.number().nonnegative(),
+   totalPrice: z.number().nonnegative().optional(),
+   vatType: z.nativeEnum(VATType).default(VATType.STANDARD),
+-  vatRate: z.number().min(0).max(100).default(17),
++  vatRate: z.number().min(0).max(100).default(18),
+   catalogNumber: z.string().optional(),
+   category: z.string().optional(),
+ });
