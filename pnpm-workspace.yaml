@@ -1,0 +1,7 @@
+# pnpm workspace - מערכת קייטרינג מאוחדת
+# כל ה-apps וה-packages מנוהלים מכאן
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "packages/integrations/*"
+  - "services/*"

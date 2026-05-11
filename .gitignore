@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.pnpm-store/
+
+# Builds
+dist/
+build/
+out/
+.next/
+.turbo/
+.expo/
+coverage/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+prisma/migrations/*/migration_lock.toml.bak
+
+# Imported worktree leftovers (לא להעלות)
+scripts/_imported/
+
+# Mobile
+*.jks
+*.p12
+*.key
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist

@@ -1,0 +1,33 @@
+# Dockerfile גנרי ל-Next.js apps במונורפו
+# שימוש לכל app:  docker build -f docker/Dockerfile.next-app --build-arg APP=orders .
+
+ARG APP
+
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+WORKDIR /repo
+
+# שלב deps - מתקין רק dependencies
+FROM base AS deps
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* turbo.json tsconfig.base.json ./
+COPY apps apps
+COPY packages packages
+COPY services services
+RUN pnpm install --frozen-lockfile
+
+# שלב build
+FROM deps AS build
+ARG APP
+RUN pnpm --filter "@catering/${APP}" build
+
+# שלב runtime
+FROM node:20-alpine AS runner
+ARG APP
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build /repo/apps/${APP}/.next ./.next
+COPY --from=build /repo/apps/${APP}/public ./public 2>/dev/null || true
+COPY --from=build /repo/apps/${APP}/package.json ./
+COPY --from=build /repo/node_modules ./node_modules
+EXPOSE 3000
+CMD ["node_modules/.bin/next", "start"]

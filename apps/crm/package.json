@@ -1,0 +1,27 @@
+{
+  "name": "@catering/crm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ניהול לקוחות וקשרי קהל (05)",
+  "scripts": {
+    "dev": "next dev --port 3005",
+    "build": "next build",
+    "start": "next start --port 3005",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@catering/db": "workspace:*",
+    "@catering/auth": "workspace:*",
+    "@catering/audit": "workspace:*",
+    "@catering/contracts": "workspace:*",
+    "@catering/ui": "workspace:*",
+    "@catering/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^22.10.0",
+    "vitest": "^2.1.8"
+  }
+}

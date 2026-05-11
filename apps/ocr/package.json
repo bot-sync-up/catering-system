@@ -1,0 +1,27 @@
+{
+  "name": "@catering/ocr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OCR לחשבוניות ספקים (12)",
+  "scripts": {
+    "dev": "next dev --port 3012",
+    "build": "next build",
+    "start": "next start --port 3012",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@catering/db": "workspace:*",
+    "@catering/auth": "workspace:*",
+    "@catering/audit": "workspace:*",
+    "@catering/contracts": "workspace:*",
+    "@catering/ui": "workspace:*",
+    "@catering/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^22.10.0",
+    "vitest": "^2.1.8"
+  }
+}
