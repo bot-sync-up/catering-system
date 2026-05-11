@@ -1,0 +1,27 @@
+{
+  "name": "@catering/integration-adapters",
+  "version": "0.1.0",
+  "description": "11 integration adapters בין service-ים שונים במערכת הקייטרינג",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@catering/event-bus": "workspace:*",
+    "pino": "^9.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.12.7"
+  }
+}
