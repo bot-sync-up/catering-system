@@ -1,0 +1,41 @@
+{
+  "uid": "errors-overview",
+  "title": "Errors & Latency",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["errors"],
+  "time": { "from": "now-3h", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "title": "5xx rate by app",
+      "type": "timeseries",
+      "targets": [{ "expr": "sum by (app)(rate(http_requests_total{status=~\"5..\"}[5m]))" }],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "id": 2, "title": "P50 / P95 / P99 latency",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le)(rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by (le)(rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum by (le)(rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "id": 3, "title": "Failed BullMQ jobs (last 1h)",
+      "type": "bargauge",
+      "targets": [{ "expr": "increase(bullmq_queue_failed_total[1h])" }],
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 }
+    },
+    {
+      "id": 4, "title": "Sentry-tagged exceptions (Loki)",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "{app=~\".+\"} |= \"sentry.captureException\"" }],
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 }
+    }
+  ]
+}

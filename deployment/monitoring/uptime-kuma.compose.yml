@@ -1,0 +1,27 @@
+# Standalone Uptime Kuma — provides black-box monitoring + status page.
+version: "3.9"
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    ports: ["3001:3001"]
+    volumes:
+      - kuma-data:/app/data
+    environment:
+      UPTIME_KUMA_DISABLE_FRAME_SAMEORIGIN: "true"
+    healthcheck:
+      test: ["CMD", "node", "extra/healthcheck.js"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+volumes:
+  kuma-data:
+
+# Suggested monitors (configure in UI):
+#  - HTTPS https://www.example.com           every 60s
+#  - HTTPS https://admin.example.com         every 60s
+#  - HTTPS https://api.example.com/health    every 30s
+#  - Ping  postgres.internal                 every 60s
+#  - TCP   redis.internal:6379               every 60s
+#  - Keyword: "ok"  on  /api/health          every 60s
+#  - Cert expiry < 14d -> alert

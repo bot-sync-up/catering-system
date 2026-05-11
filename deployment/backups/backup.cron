@@ -1,0 +1,16 @@
+# Backup schedule — paste into root crontab (or kube CronJobs).
+# Retention enforced by bucket lifecycle:
+#   daily/    -> 30 days
+#   weekly/   -> 12 weeks
+#   monthly/  -> 84 months (7 years, for tax/GDPR compliance)
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+# Daily Postgres at 03:00 UTC
+0 3 * * *   /opt/backups/backup-postgres.sh >> /var/log/backup-postgres.log 2>&1
+
+# Hourly Redis snapshot
+15 * * * *  /opt/backups/backup-redis.sh    >> /var/log/backup-redis.log    2>&1
+
+# Weekly restore verification (Sundays 05:00 UTC)
+0 5 * * 0   LATEST_BACKUP_URL="$(aws --endpoint-url $S3_ENDPOINT s3 ls s3://$S3_BUCKET/prod/daily/ | sort | tail -n1 | awk '{print $4}' | sed 's|^|s3://'$S3_BUCKET'/prod/daily/|')" /opt/backups/verify-restore.sh >> /var/log/backup-verify.log 2>&1

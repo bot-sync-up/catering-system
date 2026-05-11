@@ -1,0 +1,117 @@
+groups:
+  - name: platform-availability
+    interval: 30s
+    rules:
+      - alert: AppDown
+        expr: up{job="nextjs-apps"} == 0
+        for: 2m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "App {{ $labels.app }} is down"
+          description: "Instance {{ $labels.instance }} has been unreachable for 2 minutes."
+
+      - alert: HighErrorRate
+        expr: |
+          sum by (app) (rate(http_requests_total{status=~"5.."}[5m]))
+            / sum by (app) (rate(http_requests_total[5m])) > 0.02
+        for: 5m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "Error rate > 2% in {{ $labels.app }}"
+
+      - alert: P95LatencyHigh
+        expr: histogram_quantile(0.95, sum by (le, app) (rate(http_request_duration_seconds_bucket[5m]))) > 0.5
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "P95 latency > 500ms in {{ $labels.app }}" }
+
+  - name: infra
+    rules:
+      - alert: DiskFillingFast
+        expr: |
+          predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}[6h], 24*3600) < 0
+        for: 30m
+        labels: { severity: warning }
+        annotations: { summary: "Disk on {{ $labels.instance }} will be full in 24h" }
+
+      - alert: DiskFull
+        expr: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes < 0.10
+        for: 5m
+        labels: { severity: critical }
+        annotations: { summary: "< 10% disk free on {{ $labels.instance }}" }
+
+      - alert: HighMemory
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.92
+        for: 10m
+        labels: { severity: warning }
+
+      - alert: HighCPU
+        expr: 100 - avg by (instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100 > 85
+        for: 15m
+        labels: { severity: warning }
+
+  - name: database
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels: { severity: critical, team: data }
+        annotations: { summary: "Postgres is down on {{ $labels.instance }}" }
+
+      - alert: PostgresConnectionsHigh
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels: { severity: warning }
+
+      - alert: PostgresReplicationLag
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels: { severity: warning }
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels: { severity: critical }
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.85
+        for: 10m
+        labels: { severity: warning }
+
+  - name: queues
+    rules:
+      - alert: BullMQQueueLag
+        expr: bullmq_queue_waiting_total > 1000
+        for: 10m
+        labels: { severity: warning, team: platform }
+        annotations: { summary: "Queue {{ $labels.queue }} has > 1000 waiting jobs" }
+
+      - alert: BullMQFailedJobs
+        expr: increase(bullmq_queue_failed_total[15m]) > 50
+        for: 5m
+        labels: { severity: critical }
+        annotations: { summary: "Queue {{ $labels.queue }} accumulated > 50 failed jobs" }
+
+  - name: business
+    rules:
+      - alert: PaymentFailureSpike
+        expr: |
+          sum(rate(payment_attempts_total{status="failed"}[10m]))
+            / sum(rate(payment_attempts_total[10m])) > 0.05
+        for: 10m
+        labels: { severity: critical, team: payments }
+        annotations:
+          summary: "Payment failure rate > 5%"
+          runbook: "https://wiki.example.com/runbook/payments"
+
+      - alert: OrdersZero
+        expr: rate(orders_created_total[15m]) == 0
+        for: 30m
+        labels: { severity: warning, team: business }
+        annotations: { summary: "No new orders in 30 minutes" }
+
+      - alert: SSLCertExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 14 * 24 * 3600
+        for: 1h
+        labels: { severity: warning }
+        annotations: { summary: "Cert for {{ $labels.instance }} expires in < 14d" }

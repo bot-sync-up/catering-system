@@ -1,0 +1,33 @@
+{
+  "Rules": [
+    {
+      "ID": "daily-30d",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "prod/daily/" },
+      "Expiration": { "Days": 30 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 7 }
+    },
+    {
+      "ID": "weekly-12w",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "prod/weekly/" },
+      "Expiration": { "Days": 84 }
+    },
+    {
+      "ID": "monthly-7y",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "prod/monthly/" },
+      "Transitions": [
+        { "Days": 30,  "StorageClass": "GLACIER" },
+        { "Days": 365, "StorageClass": "DEEP_ARCHIVE" }
+      ],
+      "Expiration": { "Days": 2555 }
+    },
+    {
+      "ID": "redis-7d",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "prod/redis/" },
+      "Expiration": { "Days": 7 }
+    }
+  ]
+}

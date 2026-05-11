@@ -1,0 +1,11 @@
+{{- range $app := .Values.apps }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: { name: {{ $app.name }} }
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $app.name }}
+{{- end }}

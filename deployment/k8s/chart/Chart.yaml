@@ -1,0 +1,10 @@
+apiVersion: v2
+name: platform
+description: Monorepo platform - 20 apps + worker + data services
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords: [nextjs, monorepo, postgres, redis, bullmq]
+maintainers:
+  - name: Platform Team
+    email: platform@example.com

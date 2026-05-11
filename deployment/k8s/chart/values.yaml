@@ -1,0 +1,82 @@
+# Default values — overridden by values/{env}.yaml
+global:
+  domain: example.com
+  imageRegistry: ghcr.io/example
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets:
+    - name: ghcr-creds
+  storageClass: standard
+
+image:
+  tag: "latest"
+
+# 20 Next.js apps; each gets a Deployment, Service, Ingress, HPA.
+apps:
+  - { name: web,          replicas: 3, subdomain: www }
+  - { name: admin,        replicas: 2, subdomain: admin }
+  - { name: driver,       replicas: 2, subdomain: driver }
+  - { name: kitchen,      replicas: 2, subdomain: kitchen }
+  - { name: pos,          replicas: 2, subdomain: pos }
+  - { name: customer,     replicas: 3, subdomain: customer }
+  - { name: merchant,     replicas: 2, subdomain: merchant }
+  - { name: analytics,    replicas: 2, subdomain: analytics }
+  - { name: loyalty,      replicas: 2, subdomain: loyalty }
+  - { name: inventory,    replicas: 2, subdomain: inventory }
+  - { name: crm,          replicas: 2, subdomain: crm }
+  - { name: marketing,    replicas: 2, subdomain: marketing }
+  - { name: reports,      replicas: 2, subdomain: reports }
+  - { name: support,      replicas: 2, subdomain: support }
+  - { name: finance,      replicas: 2, subdomain: finance }
+  - { name: hr,           replicas: 1, subdomain: hr }
+  - { name: procurement,  replicas: 1, subdomain: procurement }
+  - { name: quality,      replicas: 1, subdomain: quality }
+  - { name: compliance,   replicas: 1, subdomain: compliance }
+  - { name: api-gateway,  replicas: 3, subdomain: api }
+
+resources:
+  default:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 1000m, memory: 1024Mi }
+
+worker:
+  enabled: true
+  replicas: 3
+  image: worker
+  resources:
+    requests: { cpu: 200m, memory: 512Mi }
+    limits:   { cpu: 2000m, memory: 2048Mi }
+
+bullboard:
+  enabled: true
+  replicas: 1
+
+hpa:
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPU: 70
+  targetMemory: 80
+
+ingress:
+  className: nginx
+  tlsSecret: wildcard-tls
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  storage: 100Gi
+  resources:
+    requests: { cpu: 500m, memory: 2Gi }
+    limits:   { cpu: 4000m, memory: 8Gi }
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+  storage: 10Gi
+
+secrets:
+  # Populated from external secret store (sealed-secrets / ExternalSecrets / Vault Agent injector).
+  externalSecretsRef: platform-secrets

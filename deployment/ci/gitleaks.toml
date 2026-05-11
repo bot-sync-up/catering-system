@@ -1,0 +1,32 @@
+title = "gitleaks config"
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API key"
+regex = '''(?i)(api[_-]?key|apikey|secret|token)[\"' :=]+[A-Za-z0-9_\-]{20,}'''
+tags = ["key", "API"]
+
+[[rules]]
+id = "icount-token"
+description = "iCount API token"
+regex = '''ICOUNT_API_TOKEN[\"' :=]+[A-Za-z0-9_\-]{20,}'''
+
+[[rules]]
+id = "cardcom-password"
+description = "Cardcom API password"
+regex = '''CARDCOM_API_PASSWORD[\"' :=]+\S+'''
+
+[[rules]]
+id = "aws-access-key"
+regex = '''AKIA[0-9A-Z]{16}'''
+
+[[rules]]
+id = "jwt"
+regex = '''eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*'''
+
+[allowlist]
+paths = [
+  '''deployment/.*\.example$''',
+  '''.*\.test\.ts$''',
+  '''.*\.spec\.ts$''',
+]

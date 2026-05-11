@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: migrate-
+  labels: { app.kubernetes.io/component: migrator }
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/example/migrator:${RELEASE_TAG}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "Acquiring advisory lock..."
+              psql "$DATABASE_URL" -c "SELECT pg_advisory_lock(742007);"
+              echo "Running merged migrations..."
+              pnpm prisma migrate deploy
+              echo "Releasing lock..."
+              psql "$DATABASE_URL" -c "SELECT pg_advisory_unlock(742007);"
+          envFrom:
+            - secretRef: { name: platform-secrets }

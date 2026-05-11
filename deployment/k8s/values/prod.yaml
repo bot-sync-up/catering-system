@@ -1,0 +1,22 @@
+global:
+  domain: example.com
+image:
+  tag: ${RELEASE_TAG}
+hpa:
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPU: 65
+postgres:
+  storage: 500Gi
+  resources:
+    requests: { cpu: 2000m, memory: 8Gi }
+    limits:   { cpu: 8000m, memory: 16Gi }
+redis:
+  storage: 50Gi
+ingress:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+    nginx.ingress.kubernetes.io/limit-rps: "60"
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+    nginx.ingress.kubernetes.io/enable-owasp-core-rules: "true"
