@@ -1,0 +1,19 @@
+{
+  "name": "weside-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/public-site",
+    "build": "npm run build --workspace=apps/public-site",
+    "start": "npm run start --workspace=apps/public-site",
+    "lint": "npm run lint --workspace=apps/public-site",
+    "contracts:build": "npm run build --workspace=packages/contracts"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
