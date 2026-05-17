@@ -1,0 +1,62 @@
+version: "3.9"
+
+# Development overrides — apply with:
+# docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: devpassword
+
+  redis:
+    ports:
+      - "6379:6379"
+    environment:
+      REDIS_PASSWORD: devpassword
+
+  gateway:
+    build:
+      target: dev
+    volumes:
+      - ../../apps/gateway/src:/app/src
+      - ../../apps/gateway/package.json:/app/package.json
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    ports:
+      - "4000:4000"
+      - "9229:9229" # debugger
+    command: ["npm", "run", "dev"]
+
+  next:
+    build:
+      target: dev
+    volumes:
+      - ../../apps/web/src:/app/src
+      - ../../apps/web/public:/app/public
+    environment:
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    command: ["npm", "run", "dev"]
+
+  worker:
+    build:
+      target: dev
+    volumes:
+      - ../../apps/worker/src:/app/src
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    command: ["npm", "run", "dev"]
+
+  # In dev we expose all monitoring ports for direct access
+  prometheus:
+    ports:
+      - "9090:9090"
+
+  loki:
+    ports:
+      - "3100:3100"

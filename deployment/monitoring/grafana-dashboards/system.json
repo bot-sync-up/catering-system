@@ -1,0 +1,80 @@
+{
+  "title": "System Overview",
+  "uid": "sys-overview",
+  "schemaVersion": 39,
+  "timezone": "Asia/Jerusalem",
+  "refresh": "30s",
+  "tags": ["system", "infra"],
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "CPU usage per host",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } }
+    },
+    {
+      "id": 2,
+      "title": "Memory usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent" } }
+    },
+    {
+      "id": 3,
+      "title": "Disk usage",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100)",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Network I/O",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "rate(node_network_receive_bytes_total[5m])", "legendFormat": "rx {{device}}" },
+        { "expr": "rate(node_network_transmit_bytes_total[5m])", "legendFormat": "tx {{device}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps" } }
+    },
+    {
+      "id": 5,
+      "title": "Container restarts (last 24h)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "sum by(name) (changes(container_start_time_seconds[24h]))" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Load average",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 16, "x": 8, "y": 16 },
+      "targets": [
+        { "expr": "node_load1", "legendFormat": "1m {{instance}}" },
+        { "expr": "node_load5", "legendFormat": "5m {{instance}}" },
+        { "expr": "node_load15", "legendFormat": "15m {{instance}}" }
+      ]
+    }
+  ]
+}

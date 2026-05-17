@@ -1,0 +1,45 @@
+# Multi-stage Dockerfile for background worker (BullMQ + OCR + PDF generation)
+ARG NODE_VERSION=20-alpine
+
+FROM node:${NODE_VERSION} AS deps
+WORKDIR /app
+RUN apk add --no-cache libc6-compat python3 make g++ tesseract-ocr tesseract-ocr-data-heb
+COPY package.json package-lock.json* ./
+COPY apps/worker/package.json ./apps/worker/
+RUN npm ci --include=dev
+
+FROM node:${NODE_VERSION} AS dev
+WORKDIR /app
+ENV NODE_ENV=development
+RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-heb
+COPY --from=deps /app/node_modules ./node_modules
+COPY apps/worker ./apps/worker
+WORKDIR /app/apps/worker
+CMD ["npm", "run", "dev"]
+
+FROM node:${NODE_VERSION} AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+WORKDIR /app/apps/worker
+RUN npm run build
+
+FROM node:${NODE_VERSION} AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-heb \
+ && addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 worker
+
+COPY --from=build --chown=worker:nodejs /app/apps/worker/dist ./dist
+COPY --from=build --chown=worker:nodejs /app/apps/worker/node_modules ./node_modules
+COPY --from=build --chown=worker:nodejs /app/apps/worker/package.json ./
+COPY --chown=worker:nodejs deployment/fonts ./fonts
+
+USER worker
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "require('fs').accessSync('/tmp/worker-alive')" || exit 1
+
+CMD ["node", "dist/index.js"]

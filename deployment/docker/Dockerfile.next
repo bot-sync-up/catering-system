@@ -1,0 +1,52 @@
+# Multi-stage Dockerfile for Next.js app
+ARG NODE_VERSION=20-alpine
+
+# ---------- deps ----------
+FROM node:${NODE_VERSION} AS deps
+WORKDIR /app
+RUN apk add --no-cache libc6-compat
+COPY package.json package-lock.json* ./
+COPY apps/web/package.json ./apps/web/
+RUN npm ci --include=dev
+
+# ---------- dev ----------
+FROM node:${NODE_VERSION} AS dev
+WORKDIR /app
+ENV NODE_ENV=development
+COPY --from=deps /app/node_modules ./node_modules
+COPY apps/web ./apps/web
+WORKDIR /app/apps/web
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
+
+# ---------- build ----------
+FROM node:${NODE_VERSION} AS build
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+WORKDIR /app/apps/web
+RUN npm run build
+
+# ---------- runner ----------
+FROM node:${NODE_VERSION} AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 nextjs
+
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+
+USER nextjs
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:3000/api/health || exit 1
+
+CMD ["node", "apps/web/server.js"]
