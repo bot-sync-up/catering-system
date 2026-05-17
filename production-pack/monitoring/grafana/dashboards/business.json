@@ -1,0 +1,74 @@
+{
+  "uid": "biz-overview",
+  "title": "Business KPIs",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "tags": ["business"],
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Orders / 24h",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 5 },
+      "targets": [ { "expr": "increase(orders_total[24h])" } ]
+    },
+    {
+      "type": "stat",
+      "title": "Revenue / 24h",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 5 },
+      "targets": [ { "expr": "increase(orders_revenue_total[24h])" } ],
+      "fieldConfig": { "defaults": { "unit": "currencyILS" } }
+    },
+    {
+      "type": "stat",
+      "title": "Active users (15m)",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 5 },
+      "targets": [ { "expr": "active_users_15m" } ]
+    },
+    {
+      "type": "stat",
+      "title": "Payment success rate",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 5 },
+      "targets": [
+        { "expr": "1 - (rate(payment_failures_total[1h]) / rate(payment_attempts_total[1h]))" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 0.95 }, { "color": "green", "value": 0.98 } ] } } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Orders / minute",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 5, "w": 12, "h": 8 },
+      "targets": [ { "expr": "rate(orders_total[5m]) * 60" } ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Payment failures by provider",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 5, "w": 12, "h": 8 },
+      "targets": [ { "expr": "rate(payment_failures_total[5m]) by (provider)", "legendFormat": "{{provider}}" } ]
+    },
+    {
+      "type": "timeseries",
+      "title": "OCR jobs (success vs fail)",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 13, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(ocr_jobs_succeeded_total[5m])", "legendFormat": "success" },
+        { "expr": "rate(ocr_job_failures_total[5m])",   "legendFormat": "fail"    }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue depth",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 13, "w": 12, "h": 8 },
+      "targets": [ { "expr": "bull_queue_waiting", "legendFormat": "{{queue}}" } ]
+    }
+  ]
+}

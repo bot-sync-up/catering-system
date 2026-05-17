@@ -1,0 +1,33 @@
+global:
+  env: development
+  domain: dev.example.com
+
+next:
+  replicaCount: 1
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+  autoscaling: { enabled: false }
+
+gateway:
+  replicaCount: 1
+  autoscaling: { enabled: false }
+
+worker:
+  replicaCount: 1
+  autoscaling: { enabled: false }
+  env:
+    WORKER_CONCURRENCY: "2"
+
+ingress:
+  hosts:
+    - host: dev.example.com
+      paths:
+        - { path: /,    pathType: Prefix, service: next }
+        - { path: /api, pathType: Prefix, service: gateway }
+  tls:
+    - secretName: app-tls-dev
+      hosts: [dev.example.com]
+
+podDisruptionBudget: { enabled: false }
+serviceMonitor:      { enabled: false }

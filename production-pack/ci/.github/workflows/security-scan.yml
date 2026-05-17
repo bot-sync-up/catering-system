@@ -1,0 +1,110 @@
+name: security-scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * 1"  # Mondays 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  gitleaks:
+    name: gitleaks (secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20", cache: npm }
+      - run: npm ci --no-audit --no-fund
+      - name: audit high+critical
+        run: |
+          set -e
+          npm audit --omit=dev --audit-level=high --json > audit.json || true
+          high=$(jq '[.vulnerabilities[] | select(.severity=="high" or .severity=="critical")] | length' audit.json)
+          echo "high/critical: $high"
+          if [ "$high" -gt 0 ]; then
+            jq '.vulnerabilities | to_entries[] | select(.value.severity=="high" or .value.severity=="critical") | {pkg:.key, sev:.value.severity, via:.value.via}' audit.json
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: npm-audit, path: audit.json }
+
+  trivy-fs:
+    name: trivy filesystem
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: { sarif_file: trivy-fs.sarif }
+
+  trivy-image:
+    name: trivy image (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [next, gateway, worker]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: production-pack/docker/Dockerfile.${{ matrix.target }}
+          push: false
+          load: true
+          tags: scan:${{ matrix.target }}
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: scan:${{ matrix.target }}
+          format: sarif
+          output: trivy-${{ matrix.target }}.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: { sarif_file: trivy-${{ matrix.target }}.sarif, category: trivy-${{ matrix.target }} }
+
+  codeql:
+    name: codeql
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        language: [javascript-typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with: { languages: ${{ matrix.language }} }
+      - uses: github/codeql-action/analyze@v3

@@ -1,0 +1,51 @@
+{
+  "uid": "errors-overview",
+  "title": "Errors and Latency",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["errors", "slo"],
+  "time": { "from": "now-3h", "to": "now" },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP 5xx rate",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))", "legendFormat": "5xx rate" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 } }
+    },
+    {
+      "type": "timeseries",
+      "title": "p50 / p95 / p99 latency",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.5,  sum by (le)(rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by (le)(rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum by (le)(rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "table",
+      "title": "Top error routes",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 10 },
+      "targets": [
+        { "expr": "topk(10, sum by (route) (rate(http_requests_total{status=~\"5..\"}[15m])))", "format": "table", "instant": true }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Error logs (Loki)",
+      "datasource": "Loki",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 10 },
+      "targets": [
+        { "expr": "{level=\"error\"} | json | line_format \"{{.service}} {{.msg}}\"" }
+      ]
+    }
+  ]
+}
