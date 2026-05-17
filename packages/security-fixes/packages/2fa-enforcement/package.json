@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/2fa-enforcement",
+  "version": "1.0.0",
+  "description": "Middleware שחוסם login של admin בלי 2FA פעיל",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>מערכת ניהול אירועים</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">EM</span>
+      <h1>ניהול אירועים</h1>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="dashboard">לוח בקרה</button>
+      <button class="tab" data-tab="events">אירועים</button>
+      <button class="tab" data-tab="gantt">Gantt</button>
+      <button class="tab" data-tab="venues">אולמות</button>
+      <button class="tab" data-tab="equipment">ציוד</button>
+    </nav>
+    <div class="status">
+      <span class="dot" id="ws-dot"></span>
+      <span id="ws-text">מתחבר...</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Dashboard -->
+    <section id="tab-dashboard" class="view active">
+      <div class="cards">
+        <div class="card"><h3>אירועים פעילים</h3><div class="big" id="kpi-active">0</div></div>
+        <div class="card"><h3>סך אירועים</h3><div class="big" id="kpi-total">0</div></div>
+        <div class="card"><h3>אולמות</h3><div class="big" id="kpi-venues">0</div></div>
+        <div class="card"><h3>פריטי ציוד</h3><div class="big" id="kpi-equipment">0</div></div>
+      </div>
+      <h2>אירועים אחרונים</h2>
+      <div id="recent-events" class="list"></div>
+    </section>
+
+    <!-- Events list -->
+    <section id="tab-events" class="view">
+      <div class="toolbar">
+        <button class="btn primary" id="btn-new-event">+ אירוע חדש</button>
+      </div>
+      <table class="table">
+        <thead>
+          <tr><th>שם</th><th>תאריך</th><th>אולם</th><th>סטטוס</th><th>התקדמות</th><th>פעולות</th></tr>
+        </thead>
+        <tbody id="events-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- Gantt -->
+    <section id="tab-gantt" class="view">
+      <div class="toolbar">
+        <label>בחר אירוע:</label>
+        <select id="gantt-event-select"></select>
+        <div class="btn-group">
+          <button class="btn" data-mode="Day">יום</button>
+          <button class="btn" data-mode="Week">שבוע</button>
+          <button class="btn" data-mode="Month">חודש</button>
+        </div>
+        <button class="btn primary" id="btn-add-task">+ משימה</button>
+      </div>
+      <div id="gantt-target" class="gantt-wrap"></div>
+    </section>
+
+    <!-- Venues -->
+    <section id="tab-venues" class="view">
+      <div class="toolbar">
+        <button class="btn primary" id="btn-new-venue">+ אולם חדש</button>
+      </div>
+      <div id="venues-grid" class="grid"></div>
+    </section>
+
+    <!-- Equipment -->
+    <section id="tab-equipment" class="view">
+      <div class="toolbar">
+        <button class="btn primary" id="btn-new-equipment">+ פריט ציוד</button>
+      </div>
+      <table class="table">
+        <thead>
+          <tr><th>שם</th><th>קטגוריה</th><th>כמות במלאי</th><th>מחיר יחידה</th><th>מחיר יומי השכרה</th><th>פעולות</th></tr>
+        </thead>
+        <tbody id="equipment-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- Event Detail Drawer -->
+    <aside id="event-drawer" class="drawer">
+      <div class="drawer-header">
+        <h2 id="drawer-title">אירוע</h2>
+        <button class="btn" id="drawer-close">סגור</button>
+      </div>
+      <div class="drawer-tabs">
+        <button class="dtab active" data-dtab="overview">סקירה</button>
+        <button class="dtab" data-dtab="checklist">צ'קליסטים</button>
+        <button class="dtab" data-dtab="staff">צוות</button>
+        <button class="dtab" data-dtab="venue">אולם</button>
+        <button class="dtab" data-dtab="equipment">ציוד</button>
+        <button class="dtab" data-dtab="rental">השכרה</button>
+        <button class="dtab" data-dtab="debrief">Debrief</button>
+      </div>
+      <div class="drawer-body">
+        <div id="d-overview" class="dview active"></div>
+        <div id="d-checklist" class="dview"></div>
+        <div id="d-staff" class="dview"></div>
+        <div id="d-venue" class="dview"></div>
+        <div id="d-equipment" class="dview"></div>
+        <div id="d-rental" class="dview"></div>
+        <div id="d-debrief" class="dview"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modal container -->
+  <div id="modal-root"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.umd.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CardCom - לוח בקרה</title>
+    <style>
+      body { font-family: 'Segoe UI', 'Heebo', Arial, sans-serif; margin: 0; background: #f5f7fa; color: #1a202c; }
+      .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+      h1, h2 { color: #2d3748; }
+      table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+      th, td { padding: 12px; text-align: right; border-bottom: 1px solid #e2e8f0; }
+      th { background: #edf2f7; font-weight: 600; }
+      tr:hover { background: #f7fafc; }
+      .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+      .badge.ok { background: #c6f6d5; color: #22543d; }
+      .badge.fail { background: #fed7d7; color: #742a2a; }
+      .badge.open { background: #feebc8; color: #7b341e; }
+      button { padding: 8px 16px; border-radius: 6px; border: none; background: #3182ce; color: white; cursor: pointer; font-weight: 500; }
+      button:hover { background: #2c5282; }
+      .filters { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+      select, input { padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 6px; }
+      .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; }
+      .tab { padding: 10px 20px; cursor: pointer; border-bottom: 3px solid transparent; }
+      .tab.active { border-bottom-color: #3182ce; color: #3182ce; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

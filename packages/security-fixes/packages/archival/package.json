@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/archival",
+  "version": "1.0.0",
+  "description": "Cron לארכיון מסמכים ב-R2 cold storage לתקופה רגולטורית של 7 שנים",
+  "main": "dist/cron.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}

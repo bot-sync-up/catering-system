@@ -1,0 +1,293 @@
+// Prisma Schema - Menu & Pricing Platform
+// תפריטים, חבילות, אלרגיות, מחירונים, קופונים, נאמנות, תמחור עונתי
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============= משתמשים ולקוחות =============
+
+model Customer {
+  id              String           @id @default(uuid())
+  name            String
+  email           String           @unique
+  phone           String?
+  type            String           @default("PRIVATE") // PRIVATE | BUSINESS | HOTEL | VIP
+  loyaltyPoints   Int              @default(0)
+  loyaltyTier     String           @default("BRONZE") // BRONZE | SILVER | GOLD | PLATINUM
+  priceListId    String?
+  priceList      CustomerPriceList? @relation(fields: [priceListId], references: [id])
+  orders          Order[]
+  loyaltyHistory  LoyaltyEntry[]
+  couponUsages    CouponUsage[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+// ============= תפריט =============
+
+model Menu {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean        @default(true)
+  isTemplate  Boolean        @default(false) // תבנית בסיס
+  customerId  String?        // אם מותאם ללקוח ספציפי
+  categories  MenuCategory[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model MenuCategory {
+  id        String     @id @default(uuid())
+  name      String     // ראשונה / עיקרית / תוספת / קינוח / שתייה
+  type      String     // STARTER | MAIN | SIDE | DESSERT | DRINK
+  order     Int        @default(0)
+  menuId    String
+  menu      Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  items     MenuItem[]
+}
+
+model MenuItem {
+  id              String              @id @default(uuid())
+  name            String
+  description     String?
+  basePrice       Float
+  imageUrl        String?
+  isAvailable     Boolean             @default(true)
+  order           Int                 @default(0)
+  categoryId      String
+  category        MenuCategory        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  allergies       MenuItemAllergy[]
+  diets           MenuItemDiet[]
+  packageItems    PackageItem[]
+  orderItems      OrderItem[]
+  seasonalPrices  SeasonalPricing[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+}
+
+// ============= אלרגיות ודיאטות =============
+
+model Allergy {
+  id          String            @id @default(uuid())
+  name        String            @unique // גלוטן, אגוזים, חלב, ביצים, סויה, דגים
+  icon        String?
+  severity    String            @default("MEDIUM") // LOW | MEDIUM | HIGH
+  menuItems   MenuItemAllergy[]
+  guests      GuestAllergy[]
+}
+
+model Diet {
+  id          String         @id @default(uuid())
+  name        String         @unique // טבעוני, צמחוני, ללא גלוטן, כשר, חלאל
+  description String?
+  menuItems   MenuItemDiet[]
+  guests      GuestDiet[]
+}
+
+model MenuItemAllergy {
+  menuItemId String
+  allergyId  String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  allergy    Allergy  @relation(fields: [allergyId], references: [id], onDelete: Cascade)
+  @@id([menuItemId, allergyId])
+}
+
+model MenuItemDiet {
+  menuItemId String
+  dietId     String
+  isSuitable Boolean  @default(true) // אם מתאים לדיאטה
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  diet       Diet     @relation(fields: [dietId], references: [id], onDelete: Cascade)
+  @@id([menuItemId, dietId])
+}
+
+// ============= אורחים =============
+
+model Guest {
+  id         String         @id @default(uuid())
+  name       String
+  orderId    String
+  order      Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  allergies  GuestAllergy[]
+  diets      GuestDiet[]
+  createdAt  DateTime       @default(now())
+}
+
+model GuestAllergy {
+  guestId   String
+  allergyId String
+  guest     Guest   @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  allergy   Allergy @relation(fields: [allergyId], references: [id], onDelete: Cascade)
+  @@id([guestId, allergyId])
+}
+
+model GuestDiet {
+  guestId String
+  dietId  String
+  guest   Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  diet    Diet  @relation(fields: [dietId], references: [id], onDelete: Cascade)
+  @@id([guestId, dietId])
+}
+
+// ============= חבילות =============
+
+model Package {
+  id            String        @id @default(uuid())
+  name          String
+  description   String?
+  type          String        @default("CUSTOM") // WEDDING | VIP | BAR_MITZVAH | BUSINESS | CUSTOM
+  basePrice     Float
+  pricePerGuest Float?        // מחיר נוסף לאורח
+  minGuests     Int           @default(1)
+  maxGuests     Int?
+  isActive      Boolean       @default(true)
+  items         PackageItem[]
+  orders        Order[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model PackageItem {
+  id          String   @id @default(uuid())
+  packageId   String
+  menuItemId  String
+  quantity    Int      @default(1)
+  package     Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+}
+
+// ============= מחירונים =============
+
+model CustomerPriceList {
+  id              String     @id @default(uuid())
+  name            String     // "מחירון מלונות", "מחירון VIP"
+  description     String?
+  globalDiscount  Float      @default(0) // אחוז הנחה גלובלי
+  isActive        Boolean    @default(true)
+  customers       Customer[]
+  itemPrices      PriceListItem[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model PriceListItem {
+  id          String            @id @default(uuid())
+  priceListId String
+  menuItemId  String
+  customPrice Float?            // מחיר מותאם
+  discount    Float?            // או הנחה באחוזים
+  priceList   CustomerPriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  @@unique([priceListId, menuItemId])
+}
+
+// ============= קופונים =============
+
+model Coupon {
+  id              String        @id @default(uuid())
+  code            String        @unique
+  name            String
+  description     String?
+  type            String        // PERCENTAGE | FIXED_AMOUNT
+  value           Float         // אחוז או סכום
+  minOrderAmount  Float?
+  maxDiscount     Float?        // תקרה (לאחוזים)
+  validFrom       DateTime
+  validUntil      DateTime
+  maxUses         Int?          // null = ללא הגבלה
+  usesCount       Int           @default(0)
+  perCustomerLimit Int?         // כמה פעמים לקוח יכול להשתמש
+  isActive        Boolean       @default(true)
+  usages          CouponUsage[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model CouponUsage {
+  id         String   @id @default(uuid())
+  couponId   String
+  customerId String
+  orderId    String?
+  amount     Float    // סכום ההנחה בפועל
+  coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+// ============= תכנית נאמנות =============
+
+model LoyaltyEntry {
+  id         String   @id @default(uuid())
+  customerId String
+  type       String   // EARN | REDEEM | EXPIRE | ADJUST
+  points     Int      // חיובי לצבירה, שלילי למימוש
+  reason     String?
+  orderId    String?
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model LoyaltyTierConfig {
+  id              String @id @default(uuid())
+  tier            String @unique // BRONZE | SILVER | GOLD | PLATINUM
+  minPoints       Int
+  pointsMultiplier Float @default(1) // כפל נקודות
+  discountPercent Float @default(0)
+}
+
+// ============= תמחור עונתי =============
+
+model SeasonalPricing {
+  id           String   @id @default(uuid())
+  name         String   // "פסח 2026", "ראש השנה"
+  menuItemId   String?  // null = כל הפריטים
+  multiplier   Float    @default(1.0) // 1.2 = 20% תוספת
+  fixedPrice   Float?   // או מחיר קבוע
+  validFrom    DateTime
+  validUntil   DateTime
+  isActive     Boolean  @default(true)
+  priority     Int      @default(0) // למקרה של התנגשות
+  menuItem     MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+// ============= הזמנות =============
+
+model Order {
+  id              String        @id @default(uuid())
+  orderNumber     String        @unique
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  packageId       String?
+  package         Package?      @relation(fields: [packageId], references: [id])
+  eventDate       DateTime?
+  guestCount      Int           @default(1)
+  guests          Guest[]
+  items           OrderItem[]
+  subtotal        Float         @default(0)
+  discountAmount  Float         @default(0)
+  couponCode      String?
+  loyaltyRedeemed Int           @default(0)
+  total           Float         @default(0)
+  status          String        @default("DRAFT") // DRAFT | CONFIRMED | COMPLETED | CANCELLED
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  quantity   Int      @default(1)
+  unitPrice  Float
+  totalPrice Float
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+}

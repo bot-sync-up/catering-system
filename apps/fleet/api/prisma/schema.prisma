@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum FuelType {
+  PETROL    // בנזין
+  DIESEL    // דיזל
+  HYBRID    // היברידי
+  ELECTRIC  // חשמלי
+  GAS       // גז
+}
+
+enum DocumentType {
+  TEST      // טסט (רישוי שנתי)
+  INSURANCE_MANDATORY  // ביטוח חובה
+  INSURANCE_COMPREHENSIVE // ביטוח מקיף
+  LICENSE   // רישיון רכב
+  LICENSE_DRIVER // רישיון נהיגה
+}
+
+enum ExpenseType {
+  FUEL      // דלק
+  SERVICE   // טיפול
+  REPAIR    // תיקון
+  FINE      // קנס
+  PARKING   // חנייה
+  TOLL      // אגרה / כביש
+  WASH      // שטיפה
+  OTHER     // אחר
+}
+
+enum MileagePurpose {
+  BUSINESS  // עסקי
+  PRIVATE   // פרטי
+  MIXED     // מעורב
+}
+
+enum AlertLevel {
+  D60
+  D30
+  D7
+  EXPIRED
+}
+
+enum UserRole {
+  ADMIN     // מנהל
+  MANAGER   // אחראי צי
+  DRIVER    // נהג
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(DRIVER)
+  phone     String?
+  driver    Driver?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Driver {
+  id            String    @id @default(cuid())
+  userId        String?   @unique
+  user          User?     @relation(fields: [userId], references: [id])
+  name          String
+  phone         String?
+  idNumber      String?   // תעודת זהות
+  licenseNumber String?   // מספר רישיון נהיגה
+  licenseExpiry DateTime? // תוקף רישיון נהיגה
+  notes         String?
+  vehicles      Vehicle[]
+  mileages      Mileage[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Vehicle {
+  id            String   @id @default(cuid())
+  plate         String   @unique  // מספר רכב
+  make          String              // יצרן
+  model         String              // דגם
+  year          Int                 // שנת ייצור
+  fuel          FuelType
+  color         String?
+  vin           String?  @unique    // מספר שלדה
+  currentKm     Int      @default(0)
+  notes         String?
+  driverId      String?
+  driver        Driver?  @relation(fields: [driverId], references: [id])
+  documents     VehicleDocument[]
+  expenses      VehicleExpense[]
+  mileages      Mileage[]
+  alerts        Alert[]
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([driverId])
+}
+
+model VehicleDocument {
+  id         String       @id @default(cuid())
+  vehicleId  String
+  vehicle    Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type       DocumentType
+  issueDate  DateTime?
+  expiry     DateTime     // תוקף — חובה
+  amount     Float?       // עלות (פרמיה / אגרה)
+  vendor     String?      // חברת ביטוח / רשות
+  policyNo   String?      // מס׳ פוליסה
+  fileUrl    String?      // צילום תעודה
+  notes      String?
+  alerts     Alert[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([vehicleId])
+  @@index([expiry])
+}
+
+model VehicleExpense {
+  id         String      @id @default(cuid())
+  vehicleId  String
+  vehicle    Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type       ExpenseType
+  date       DateTime
+  amount     Float
+  liters     Float?       // לדלק
+  pricePerLiter Float?    // לדלק
+  mileage    Int?         // קריאת מד בעת ההוצאה
+  vendor     String?      // ספק / תחנת דלק
+  description String?
+  receiptUrl String?      // צילום קבלה
+  createdBy  String?      // userId
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([vehicleId])
+  @@index([date])
+  @@index([type])
+}
+
+model Mileage {
+  id        String         @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driverId  String?
+  driver    Driver?        @relation(fields: [driverId], references: [id])
+  date      DateTime
+  startKm   Int
+  endKm     Int
+  km        Int            // endKm - startKm
+  purpose   MileagePurpose @default(BUSINESS)
+  origin    String?
+  destination String?
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([vehicleId])
+  @@index([date])
+}
+
+model Alert {
+  id         String     @id @default(cuid())
+  vehicleId  String
+  vehicle    Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  documentId String?
+  document   VehicleDocument? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  level      AlertLevel
+  fireAt     DateTime
+  message    String
+  sent       Boolean    @default(false)
+  sentAt     DateTime?
+  acknowledged Boolean  @default(false)
+  createdAt  DateTime   @default(now())
+
+  @@index([vehicleId])
+  @@index([sent])
+  @@index([fireAt])
+}

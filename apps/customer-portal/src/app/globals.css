@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { height: 100%; }
+body {
+  font-family: 'Heebo', 'Rubik', system-ui, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+/* Mobile-first touch targets */
+button, a { -webkit-tap-highlight-color: transparent; }
+input, select, textarea { font-size: 16px; }
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition active:scale-95; }
+  .btn-primary { @apply btn bg-brand text-white hover:bg-brand-dark; }
+  .btn-secondary { @apply btn bg-white text-brand border border-brand/30 hover:bg-brand-light; }
+  .btn-ghost { @apply btn bg-transparent text-slate-700 hover:bg-slate-100; }
+  .card { @apply bg-white rounded-2xl shadow-sm border border-slate-200 p-4; }
+  .input { @apply w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand bg-white; }
+  .badge { @apply inline-block text-xs px-2 py-1 rounded-full font-medium; }
+}
