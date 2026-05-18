@@ -1,0 +1,160 @@
+// Privacy Portal — Prisma schema
+// יישום תיקון 13 לחוק הגנת הפרטיות (8/2025)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// משתמש קצה / נושא מידע (Data Subject)
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  phone       String?
+  fullName    String?
+  isDeleted   Boolean  @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sarRequests     SarRequest[]
+  erasureRequests ErasureRequest[]
+  consents        Consent[]
+  consentEvents   ConsentEvent[]
+  auditLogs       AuditLog[]
+}
+
+/// בקשת SAR — Subject Access Request (סעיף 13 לתיקון, זכות עיון)
+model SarRequest {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  status       SarStatus @default(PENDING_VERIFICATION)
+  verifyToken  String   @unique
+  downloadToken String? @unique
+  verifiedAt   DateTime?
+  completedAt  DateTime?
+  expiresAt    DateTime
+  artifactPath String?   // נתיב ל-ZIP על דיסק / S3
+  jobId        String?   // BullMQ job id
+  failReason   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum SarStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  IN_PROGRESS
+  READY
+  DELIVERED
+  EXPIRED
+  FAILED
+}
+
+/// בקשת מחיקה — זכות להישכח (סעיף 17 לתיקון)
+model ErasureRequest {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  status       ErasureStatus @default(PENDING_VERIFICATION)
+  approveToken String   @unique
+  approvedAt   DateTime?
+  completedAt  DateTime?
+  reason       String?
+  scope        Json     // היקפי המחיקה
+  jobId        String?
+  failReason   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum ErasureStatus {
+  PENDING_VERIFICATION
+  APPROVED
+  IN_PROGRESS
+  ANONYMIZED
+  REJECTED
+  FAILED
+}
+
+/// הסכמות פעילות לערוץ — תיעוד double opt-in
+model Consent {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  channel      ConsentChannel
+  purpose      String   // מטרת השימוש: "marketing", "service", "newsletter"
+  isActive     Boolean  @default(false)
+  optInAt      DateTime?
+  optOutAt     DateTime?
+  verifyToken  String?  @unique
+  source       String?  // מקור (URL/IP/שדה)
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, channel, purpose])
+  @@index([userId])
+}
+
+/// היסטוריה אימונטבילית של כל אירוע הסכמה (audit לפרטיות)
+model ConsentEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  channel     ConsentChannel
+  purpose     String
+  action      ConsentAction
+  proof       Json?    // ראיה: token / כתובת IP / חתימה
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, channel])
+}
+
+enum ConsentChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  PUSH
+  VOICE
+}
+
+enum ConsentAction {
+  OPT_IN_REQUESTED
+  OPT_IN_VERIFIED
+  OPT_OUT
+  EXPIRED
+  REVOKED_BY_ADMIN
+}
+
+/// יומן ביקורת כללי (נשמר גם אחרי מחיקת משתמש — חלק מ"חובת התיעוד")
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  actor      String   // "user" / "admin:<id>" / "system"
+  action     String
+  entity     String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+}
