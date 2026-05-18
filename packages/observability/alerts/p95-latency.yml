@@ -1,0 +1,46 @@
+# p95 latency של HTTP מעל שנייה למשך 5 דקות — Slack
+#
+# p95 מחושב מ-histogram bucket. אזעקה לפי route מאפשרת מיקוד.
+# Slack — לא דחוף מספיק לעוררות, אבל דורש תשומת לב.
+
+groups:
+  - name: latency_p95
+    interval: 30s
+    rules:
+      - alert: HttpP95LatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket{route!~"/metrics|/health.*"}[5m]))
+            by (le, route, service)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+          notify: slack
+        annotations:
+          summary: "p95 latency מעל 1 שנייה ב-{{ $labels.route }}"
+          description: |
+            שירות: {{ $labels.service }}
+            route: {{ $labels.route }}
+            p95 = {{ $value }}s
+            פעולה: בדוק traces ב-Tempo, חפש שאילתות איטיות.
+          dashboard_url: "https://grafana.syncup.co.il/d/system"
+
+      - alert: HttpP99LatencyCritical
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(http_request_duration_seconds_bucket{route!~"/metrics|/health.*"}[5m]))
+            by (le, route, service)
+          ) > 5.0
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+          notify: slack
+          page: pagerduty
+        annotations:
+          summary: "p99 מעל 5 שניות — בעיית ביצועים חמורה"
+          description: "route {{ $labels.route }}: p99={{ $value }}s"

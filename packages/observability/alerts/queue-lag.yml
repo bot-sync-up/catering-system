@@ -1,0 +1,48 @@
+# BullMQ queue depth מעל 1000 — Ops
+#
+# צבירה של jobs = workers לא מספיקים, או job תקוע.
+# 1000 הוא סף שמרני; להתאים לפי throughput של כל queue.
+
+groups:
+  - name: queue_lag
+    interval: 30s
+    rules:
+      - alert: QueueDepthHigh
+        expr: queue_depth{state="waiting"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: ops
+          notify: slack-ops
+        annotations:
+          summary: "תור {{ $labels.queue }} עם {{ $value }} jobs ממתינים"
+          description: |
+            queue: {{ $labels.queue }}
+            depth: {{ $value }}
+            פעולה:
+              1. בדוק מספר workers (kubectl get pods -l queue={{ $labels.queue }})
+              2. בדוק error rate בתור (queue_jobs_total{result="failed"})
+              3. שקול scale up.
+          runbook_url: "https://wiki.syncup.co.il/runbooks/queue-lag"
+
+      - alert: QueueDepthCritical
+        expr: queue_depth{state="waiting"} > 10000
+        for: 2m
+        labels:
+          severity: critical
+          team: ops
+          page: pagerduty
+        annotations:
+          summary: "תור {{ $labels.queue }} מתפוצץ: {{ $value }} jobs"
+          description: "מצב חירום — workers לא עומדים בקצב."
+
+      - alert: QueueStalled
+        expr: rate(queue_jobs_total[10m]) == 0 and queue_depth{state="waiting"} > 0
+        for: 10m
+        labels:
+          severity: critical
+          team: ops
+          page: pagerduty
+        annotations:
+          summary: "תור {{ $labels.queue }} תקוע — אין עיבוד כלל"
+          description: "workers נראה ש-down, בדוק logs."
