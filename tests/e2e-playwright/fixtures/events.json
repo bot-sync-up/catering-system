@@ -1,0 +1,54 @@
+{
+  "events": [
+    {
+      "id": "EVT-WEDDING-700",
+      "type": "חתונה",
+      "date": "15/08/2026",
+      "guests": 700,
+      "hall": "אולמי גן ורד",
+      "menuId": "MENU-WEDDING-PREMIUM",
+      "expectedTotal": 224000,
+      "downPayment": 50000,
+      "notes": "חתונה דתית - הפרדה מלאה, חופה ב-19:00"
+    },
+    {
+      "id": "EVT-BARMITZVAH-150",
+      "type": "בר מצווה",
+      "date": "10/06/2026",
+      "guests": 150,
+      "hall": "אולם השרון",
+      "menuId": "MENU-BARMITZVAH",
+      "expectedTotal": 27000
+    },
+    {
+      "id": "EVT-BUSINESS-CONF",
+      "type": "אירוע עסקי",
+      "date": "20/07/2026",
+      "guests": 80,
+      "hall": "מלון דן",
+      "menuId": "MENU-BUSINESS",
+      "expectedTotal": 11600
+    },
+    {
+      "id": "EVT-CANCELLED",
+      "type": "חתונה",
+      "date": "01/12/2026",
+      "guests": 250,
+      "hall": "אולמי כנען",
+      "menuId": "MENU-WEDDING-CLASSIC",
+      "expectedTotal": 62500,
+      "downPayment": 15000,
+      "cancellationReason": "בקשת לקוח - דחיית תאריך"
+    }
+  ],
+  "subscriptions": [
+    {
+      "id": "SUB-SCHOOL-MONTHLY",
+      "plan": "ארוחות יום - בית ספר",
+      "cycle": "חודשי",
+      "price": 9900,
+      "daysPerMonth": 22,
+      "menuId": "MENU-SCHOOL-DAILY"
+    }
+  ]
+}

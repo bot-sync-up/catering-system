@@ -1,0 +1,60 @@
+{
+  "menus": [
+    {
+      "id": "MENU-WEDDING-PREMIUM",
+      "name": "תפריט חתונה פרימיום",
+      "pricePerPerson": 320,
+      "minGuests": 100,
+      "kosher": "מהדרין",
+      "courses": [
+        "מנת פתיחה - קרפצ'יו דג ים",
+        "סלטים מזרחיים",
+        "מנה ראשונה - מרק עוף",
+        "מנה עיקרית - אנטריקוט/דג/צמחוני",
+        "תוספות - אורז, ירקות צלויים, תפו\"א",
+        "קינוח - שולחן מתוקים"
+      ]
+    },
+    {
+      "id": "MENU-WEDDING-CLASSIC",
+      "name": "תפריט חתונה קלאסי",
+      "pricePerPerson": 250,
+      "minGuests": 100,
+      "kosher": "רבנות",
+      "courses": [
+        "סלטים",
+        "מנה ראשונה - קוקטייל פירות ים צמחוני",
+        "מנה עיקרית - עוף/בקר",
+        "תוספות",
+        "קינוח"
+      ]
+    },
+    {
+      "id": "MENU-SCHOOL-DAILY",
+      "name": "תפריט בית ספר יומי",
+      "pricePerPerson": 22,
+      "minGuests": 50,
+      "kosher": "מהדרין",
+      "courses": [
+        "מנה עיקרית חמה",
+        "תוספת מבושלת",
+        "סלט יום",
+        "פרי / קינוח קל"
+      ]
+    },
+    {
+      "id": "MENU-BARMITZVAH",
+      "name": "תפריט בר מצווה",
+      "pricePerPerson": 180,
+      "minGuests": 50,
+      "kosher": "מהדרין"
+    },
+    {
+      "id": "MENU-BUSINESS",
+      "name": "תפריט כנס עסקי",
+      "pricePerPerson": 145,
+      "minGuests": 30,
+      "kosher": "רבנות"
+    }
+  ]
+}
