@@ -1,0 +1,49 @@
+global:
+  env: production
+  domain: example.com
+
+next:
+  replicaCount: 3
+  resources:
+    requests: { cpu: 500m, memory: 512Mi }
+    limits:   { cpu: 2000m, memory: 2Gi }
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 20
+
+gateway:
+  replicaCount: 3
+  resources:
+    requests: { cpu: 500m, memory: 512Mi }
+    limits:   { cpu: 2000m, memory: 2Gi }
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 16
+
+worker:
+  replicaCount: 3
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits:   { cpu: 4000m, memory: 4Gi }
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 24
+  env:
+    WORKER_CONCURRENCY: "8"
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+ingress:
+  hosts:
+    - host: example.com
+      paths:
+        - { path: /,    pathType: Prefix, service: next }
+        - { path: /api, pathType: Prefix, service: gateway }
+    - host: www.example.com
+      paths:
+        - { path: /,    pathType: Prefix, service: next }
+  tls:
+    - secretName: app-tls
+      hosts: [example.com, www.example.com]

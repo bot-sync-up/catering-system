@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "allowJs": true,
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@catering/db": ["packages/db/src"],
+      "@catering/auth": ["packages/auth/src"],
+      "@catering/audit": ["packages/audit/src"],
+      "@catering/contracts": ["packages/contracts/src"],
+      "@catering/contracts/entities": ["packages/contracts/src/entities"],
+      "@catering/contracts/events": ["packages/contracts/src/events"],
+      "@catering/contracts/api": ["packages/contracts/src/api"],
+      "@catering/contracts/enums": ["packages/contracts/src/enums"],
+      "@catering/contracts-pdf": ["packages/contracts-pdf/src"],
+      "@catering/event-bus": ["packages/event-bus/src"],
+      "@catering/event-bus/saga": ["packages/event-bus/src/saga"],
+      "@catering/integration-adapters": ["packages/integration-adapters/src"],
+      "@catering/ui": ["packages/ui/src"],
+      "@catering/ui-mobile": ["packages/ui-mobile/src"],
+      "@catering/queue": ["packages/queue/src"],
+      "@catering/utils": ["packages/utils/src"],
+      "@catering/config": ["packages/config/src"],
+      "@catering/api": ["packages/api/src"],
+      "@catering/integrations/*": ["packages/integrations/*/src"],
+      "@security/*": ["packages/security-fixes/packages/*/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", "build", "out"]
+}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת לוגיסטיקה ומשלוחים</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <span class="logo">📦</span>
+            <h1>מערכת לוגיסטיקה ומשלוחים</h1>
+        </div>
+        <nav class="tabs" id="mainTabs">
+            <button class="tab active" data-view="dashboard">דשבורד</button>
+            <button class="tab" data-view="deliveries">משלוחים</button>
+            <button class="tab" data-view="assignment">שיבוץ</button>
+            <button class="tab" data-view="drivers">נהגים</button>
+            <button class="tab" data-view="vehicles">צי רכב</button>
+            <button class="tab" data-view="invoices">חשבוניות</button>
+            <button class="tab" data-view="route">תכנון מסלול</button>
+        </nav>
+    </header>
+
+    <main id="content"></main>
+
+    <!-- מודאל כללי -->
+    <div class="modal hidden" id="modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modalTitle"></h3>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/signature.js"></script>
+    <script src="/js/views.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

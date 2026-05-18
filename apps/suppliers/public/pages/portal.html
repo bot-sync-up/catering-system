@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>פורטל ספק</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header><h1>פורטל ספק</h1></header>
+  <main>
+    <div id="content"><p>טוען...</p></div>
+  </main>
+  <script>
+    (async () => {
+      const token = location.pathname.split('/').pop();
+      try {
+        const r = await fetch('/api/portal/' + token + '/orders');
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'שגיאה');
+        const labels = {draft:'טיוטה',approved:'אושר',sent:'נשלח',partial:'חלקי',received:'נקלט',cancelled:'בוטל'};
+        const rows = data.orders.map(po => `
+          <tr>
+            <td><strong>${po.po_number}</strong></td>
+            <td><span class="badge ${po.status}">${labels[po.status]||po.status}</span></td>
+            <td>${po.items_count}</td>
+            <td>${new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS'}).format(po.total||0)}</td>
+            <td>${new Date(po.created_at).toLocaleString('he-IL')}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="5" class="empty">אין הזמנות</td></tr>';
+        document.getElementById('content').innerHTML = `
+          <div class="card">
+            <h2>שלום, ${data.supplier.name}</h2>
+            <p class="muted">להלן ההזמנות הפתוחות שלך מהמערכת</p>
+          </div>
+          <table>
+            <thead><tr><th>מס׳ PO</th><th>סטטוס</th><th>שורות</th><th>סה״כ</th><th>תאריך</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      } catch (e) {
+        document.getElementById('content').innerHTML = '<div class="card empty">' + e.message + '</div>';
+      }
+    })();
+  </script>
+</body>
+</html>

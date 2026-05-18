@@ -1,0 +1,91 @@
+groups:
+  - name: app.rules
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+          sum(rate(http_requests_total[5m])) > 0.02
+        for: 5m
+        labels: { severity: critical, team: backend }
+        annotations:
+          summary: "HTTP 5xx rate > 2% for 5m"
+          description: "{{ $value | humanizePercentage }} of requests are 5xx. SLO breach."
+          runbook: "https://wiki/runbook#high-error-rate"
+
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket[5m]))) > 0.5
+        for: 10m
+        labels: { severity: warning, team: backend }
+        annotations:
+          summary: "p95 latency > 500ms on {{ $labels.route }}"
+          description: "p95 latency = {{ $value }}s for the last 10 minutes."
+
+      - alert: PaymentFailureSpike
+        expr: increase(payment_failures_total[15m]) > 5
+        for: 5m
+        labels: { severity: critical, team: payments }
+        annotations:
+          summary: "More than 5 payment failures in 15m"
+          description: "Failures = {{ $value }} (provider={{ $labels.provider }})."
+
+      - alert: QueueLagHigh
+        expr: bull_queue_waiting > 1000 or bull_queue_delayed > 5000
+        for: 10m
+        labels: { severity: warning, team: backend }
+        annotations:
+          summary: "Queue backlog on {{ $labels.queue }}"
+          description: "waiting={{ $value }}."
+
+      - alert: OcrJobFailures
+        expr: increase(ocr_job_failures_total[30m]) > 10
+        for: 5m
+        labels: { severity: warning, team: data }
+        annotations: { summary: "OCR failures spiked: {{ $value }} in 30m" }
+
+      - alert: TargetDown
+        expr: up == 0
+        for: 5m
+        labels: { severity: critical, team: ops }
+        annotations:
+          summary: "Target {{ $labels.job }} on {{ $labels.instance }} is down"
+
+  - name: infra.rules
+    interval: 30s
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 2m
+        labels: { severity: critical, team: ops }
+        annotations: { summary: "Postgres is unreachable" }
+
+      - alert: PostgresReplicationLag
+        expr: pg_replication_lag > 30
+        for: 5m
+        labels: { severity: warning, team: ops }
+        annotations: { summary: "Replication lag > 30s" }
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 10m
+        labels: { severity: warning, team: ops }
+        annotations: { summary: "Redis memory > 90%" }
+
+      - alert: DiskFillingUp
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes) < 0.15
+        for: 15m
+        labels: { severity: warning, team: ops }
+        annotations: { summary: "Disk < 15% free on {{ $labels.instance }} ({{ $labels.mountpoint }})" }
+
+      - alert: CPUSaturation
+        expr: 1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) > 0.9
+        for: 15m
+        labels: { severity: warning, team: ops }
+        annotations: { summary: "CPU > 90% on {{ $labels.instance }}" }
+
+      - alert: BackupFailed
+        expr: time() - backup_last_success_timestamp_seconds > 86400 * 1.2
+        for: 10m
+        labels: { severity: critical, team: ops }
+        annotations: { summary: "No successful backup in > 28h" }

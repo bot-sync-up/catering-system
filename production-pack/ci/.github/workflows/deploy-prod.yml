@@ -1,0 +1,166 @@
+name: deploy-prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to deploy (must already exist in registry)"
+        required: true
+      strategy:
+        description: "blue or green slot to promote into"
+        required: true
+        default: "blue"
+        type: choice
+        options: [blue, green]
+      skip_canary:
+        description: "Skip canary stage (emergency only)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: read
+  id-token: write
+  deployments: write
+
+jobs:
+  preflight:
+    name: preflight checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ inputs.sha }} }
+      - name: Verify image exists in GHCR
+        run: |
+          for img in next gateway worker; do
+            url="https://ghcr.io/v2/${{ github.repository_owner }}/${{ github.event.repository.name }}/${img}/manifests/${{ inputs.sha }}"
+            echo "checking $url"
+            curl -sfI -H "Authorization: Bearer $(echo -n ${{ secrets.GITHUB_TOKEN }} | base64)" "$url" || { echo "missing image: $img"; exit 1; }
+          done
+      - run: bash production-pack/migrations/pre-deploy-check.sh
+
+  approve:
+    name: manual approval
+    needs: preflight
+    runs-on: ubuntu-latest
+    environment:
+      name: production-approval
+    steps:
+      - run: echo "Approved by ${{ github.actor }}"
+
+  canary:
+    name: canary (10%)
+    needs: approve
+    if: ${{ !inputs.skip_canary }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ inputs.sha }} }
+      - uses: azure/setup-helm@v4
+      - uses: azure/setup-kubectl@v4
+      - name: kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.PROD_KUBECONFIG }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+      - name: helm canary release
+        run: |
+          helm upgrade --install app-canary production-pack/k8s \
+            -f production-pack/k8s/values.yaml \
+            -f production-pack/k8s/values-prod.yaml \
+            --set next.image.tag=${{ inputs.sha }} \
+            --set gateway.image.tag=${{ inputs.sha }} \
+            --set worker.image.tag=${{ inputs.sha }} \
+            --set next.replicaCount=1 --set gateway.replicaCount=1 --set worker.replicaCount=1 \
+            --set ingress.annotations."nginx\.ingress\.kubernetes\.io/canary"=true \
+            --set ingress.annotations."nginx\.ingress\.kubernetes\.io/canary-weight"=10 \
+            --namespace production --create-namespace \
+            --atomic --timeout 10m --wait
+      - name: observe 5 min
+        run: |
+          end=$((SECONDS+300))
+          while [ $SECONDS -lt $end ]; do
+            err=$(curl -fsS "https://example.com/api/health" || echo FAIL)
+            [ "$err" = "FAIL" ] && { echo "canary health failing"; exit 1; }
+            sleep 15
+          done
+
+  blue-green:
+    name: blue/green promote (${{ inputs.strategy }})
+    needs: [approve, canary]
+    if: always() && (needs.canary.result == 'success' || inputs.skip_canary)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://example.com
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ inputs.sha }} }
+
+      - uses: azure/setup-helm@v4
+      - uses: azure/setup-kubectl@v4
+
+      - name: kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.PROD_KUBECONFIG }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Deploy to ${{ inputs.strategy }} slot
+        run: |
+          helm upgrade --install app-${{ inputs.strategy }} production-pack/k8s \
+            -f production-pack/k8s/values.yaml \
+            -f production-pack/k8s/values-prod.yaml \
+            --set next.image.tag=${{ inputs.sha }} \
+            --set gateway.image.tag=${{ inputs.sha }} \
+            --set worker.image.tag=${{ inputs.sha }} \
+            --set global.slot=${{ inputs.strategy }} \
+            --namespace production \
+            --atomic --timeout 15m --wait
+
+      - name: Smoke tests on slot
+        run: |
+          slot_url="https://${{ inputs.strategy }}.example.com"
+          for ep in /api/health /api/version; do
+            curl -fsS "$slot_url$ep" || { echo "smoke fail $ep"; exit 1; }
+          done
+
+      - name: Switch traffic (update ingress)
+        run: |
+          kubectl -n production patch service app-next -p '{"spec":{"selector":{"slot":"${{ inputs.strategy }}"}}}'
+          kubectl -n production patch service app-gateway -p '{"spec":{"selector":{"slot":"${{ inputs.strategy }}"}}}'
+
+      - name: Post-switch verification
+        run: |
+          sleep 20
+          for i in 1 2 3 4 5; do
+            curl -fsS https://example.com/api/health && break || sleep 10
+          done
+
+      - name: Tear down canary
+        if: ${{ !inputs.skip_canary }}
+        run: helm uninstall app-canary -n production || true
+
+      - name: Tag release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "prod-$(date +%Y%m%d%H%M%S)-${{ inputs.sha }}" \
+            --target ${{ inputs.sha }} \
+            --title "Production deploy ${{ inputs.sha }}" \
+            --notes "Promoted to ${{ inputs.strategy }} slot by ${{ github.actor }}"
+
+      - name: Notify success
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: '{"text":"Prod deploy ok: ${{ inputs.sha }} -> ${{ inputs.strategy }}"}'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

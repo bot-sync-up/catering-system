@@ -1,0 +1,114 @@
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', 'Heebo', 'Arial Hebrew', Arial, sans-serif;
+  background: #f4f6f8;
+  color: #1a202c;
+  direction: rtl;
+  text-align: right;
+}
+
+a { color: #2b6cb0; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.layout { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 240px;
+  background: #1a365d;
+  color: #fff;
+  padding: 1.25rem 1rem;
+  position: sticky; top: 0; align-self: flex-start; height: 100vh;
+  overflow-y: auto;
+}
+.sidebar h1 { font-size: 1.15rem; margin: 0 0 1.25rem; }
+.sidebar nav a {
+  display: block; color: #cbd5e0; padding: 0.6rem 0.75rem;
+  border-radius: 6px; margin-bottom: 0.2rem;
+}
+.sidebar nav a.active, .sidebar nav a:hover { background: #2c5282; color: #fff; text-decoration: none; }
+.sidebar .user-info { margin-top: auto; padding-top: 1rem; border-top: 1px solid #2c5282; font-size: 0.85rem; }
+
+.main { flex: 1; padding: 1.5rem 2rem; max-width: 100%; overflow-x: auto; }
+.page-title { margin: 0 0 1.25rem; font-size: 1.5rem; color: #1a365d; }
+
+.card {
+  background: #fff; border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  padding: 1.25rem; margin-bottom: 1.25rem;
+}
+.card h2 { margin: 0 0 1rem; font-size: 1.1rem; color: #2d3748; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: right; padding: 0.6rem 0.75rem; border-bottom: 1px solid #e2e8f0; }
+th { background: #edf2f7; font-weight: 600; color: #2d3748; }
+tr:hover td { background: #f7fafc; }
+
+.btn {
+  background: #2b6cb0; color: #fff; border: none;
+  padding: 0.55rem 1rem; border-radius: 6px; cursor: pointer;
+  font-size: 0.95rem;
+}
+.btn:hover { background: #2c5282; }
+.btn.secondary { background: #e2e8f0; color: #2d3748; }
+.btn.secondary:hover { background: #cbd5e0; }
+.btn.danger { background: #c53030; }
+.btn.success { background: #2f855a; }
+.btn.small { padding: 0.35rem 0.65rem; font-size: 0.85rem; }
+
+input, select, textarea {
+  width: 100%; padding: 0.55rem 0.75rem;
+  border: 1px solid #cbd5e0; border-radius: 6px;
+  font-size: 0.95rem; font-family: inherit;
+  background: #fff;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: #2b6cb0; box-shadow: 0 0 0 3px rgba(43,108,176,0.12);
+}
+
+.form-row { display: flex; gap: 1rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+.form-row > div { flex: 1; min-width: 180px; }
+label { display: block; font-size: 0.85rem; margin-bottom: 0.25rem; color: #4a5568; }
+
+.tag {
+  display: inline-block; padding: 0.15rem 0.55rem;
+  border-radius: 12px; font-size: 0.78rem; font-weight: 600;
+}
+.tag.ok { background: #c6f6d5; color: #22543d; }
+.tag.warn { background: #feebc8; color: #7b341e; }
+.tag.bad { background: #fed7d7; color: #742a2a; }
+.tag.neutral { background: #e2e8f0; color: #2d3748; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.kpi {
+  background: #fff; padding: 1rem 1.25rem; border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.kpi .label { font-size: 0.85rem; color: #718096; }
+.kpi .value { font-size: 1.5rem; font-weight: 700; color: #1a365d; margin-top: 0.25rem; }
+
+.login-page {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; background: linear-gradient(135deg, #1a365d, #2c5282);
+}
+.login-card {
+  background: #fff; padding: 2rem 2.5rem; border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 360px;
+}
+.login-card h1 { margin: 0 0 1.5rem; text-align: center; color: #1a365d; }
+
+.alert {
+  padding: 0.6rem 1rem; border-radius: 6px; margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+.alert.error { background: #fed7d7; color: #742a2a; border-right: 4px solid #c53030; }
+.alert.info { background: #bee3f8; color: #2a4365; border-right: 4px solid #2b6cb0; }
+.alert.warn { background: #feebc8; color: #7b341e; border-right: 4px solid #dd6b20; }
+
+.toolbar { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: flex-end; }
+.amount { font-variant-numeric: tabular-nums; font-weight: 600; }
+.amount.neg { color: #c53030; }
+.amount.pos { color: #2f855a; }
+
+.tree-node { padding: 0.25rem 0; }
+.tree-node .row { display: flex; gap: 0.5rem; align-items: center; }
+.tree-children { margin-right: 1.5rem; border-right: 1px dashed #cbd5e0; padding-right: 0.75rem; }

@@ -1,0 +1,94 @@
+name: deploy-staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to deploy (default: HEAD)"
+        required: false
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: helm upgrade -> staging
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.example.com
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with: { version: v3.16.0 }
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with: { version: v1.31.0 }
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.STAGING_KUBECONFIG }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.kube"
+          echo "$KUBECONFIG_B64" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+          kubectl get nodes
+
+      - name: Pre-deploy migration check
+        run: bash production-pack/migrations/pre-deploy-check.sh
+
+      - name: Helm dry-run
+        run: |
+          helm upgrade --install app production-pack/k8s \
+            -f production-pack/k8s/values.yaml \
+            -f production-pack/k8s/values-staging.yaml \
+            --set next.image.tag=${{ github.sha }} \
+            --set gateway.image.tag=${{ github.sha }} \
+            --set worker.image.tag=${{ github.sha }} \
+            --namespace staging --create-namespace \
+            --atomic --timeout 10m --dry-run --debug
+
+      - name: Helm upgrade
+        run: |
+          helm upgrade --install app production-pack/k8s \
+            -f production-pack/k8s/values.yaml \
+            -f production-pack/k8s/values-staging.yaml \
+            --set next.image.tag=${{ github.sha }} \
+            --set gateway.image.tag=${{ github.sha }} \
+            --set worker.image.tag=${{ github.sha }} \
+            --namespace staging --create-namespace \
+            --atomic --timeout 10m --wait
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS https://staging.example.com/api/health; then
+              echo " smoke ok"; exit 0
+            fi
+            echo "retry $i..."; sleep 10
+          done
+          echo "smoke failed"; exit 1
+
+      - name: Notify on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: '{"text":"Staging deploy failed: ${{ github.sha }}"}'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

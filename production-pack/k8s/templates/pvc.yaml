@@ -1,0 +1,13 @@
+{{- if .Values.persistence.uploads.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-uploads
+  labels: {{- include "app.labels" (dict "Chart" .Chart "Release" .Release "Values" .Values) | nindent 4 }}
+spec:
+  accessModes: [ {{ .Values.persistence.uploads.accessMode | quote }} ]
+  storageClassName: {{ .Values.persistence.uploads.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.uploads.size }}
+{{- end }}

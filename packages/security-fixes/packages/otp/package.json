@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/otp",
+  "version": "1.0.0",
+  "description": "OTP מאובטח עם crypto.randomInt - אסור Math.random",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}

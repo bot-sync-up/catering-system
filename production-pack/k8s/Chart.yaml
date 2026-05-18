@@ -1,0 +1,15 @@
+apiVersion: v2
+name: app
+description: Next.js + Gateway + Worker production chart
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+icon: https://example.com/icon.png
+keywords:
+  - nextjs
+  - nodejs
+  - postgres
+  - redis
+maintainers:
+  - name: ops
+    email: ops@example.com

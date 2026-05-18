@@ -1,0 +1,282 @@
+// Prisma Schema – פלטפורמת HR (תיק עובד + משמרות + הערכות)
+// שדות מסוננים ב-AES-256-GCM ברמת שדה: bank, taxId, salary
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================================
+// משתמשים והרשאות
+// ==========================================================
+enum Role {
+  ADMIN     // הנהלה
+  HR        // משאבי אנוש
+  MANAGER   // מנהל משמרת
+  EMPLOYEE  // עובד
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  role           Role     @default(EMPLOYEE)
+  webauthnCredId String?  // מזהה credential ל-WebAuthn (Face ID / טביעה)
+  webauthnPubKey String?  // public key ל-WebAuthn
+  employee       Employee?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ==========================================================
+// תיק עובד
+// ==========================================================
+model Employee {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // פרטים אישיים
+  firstName     String
+  lastName      String
+  hebrewName    String?
+  photoUrl      String?            // תמונת פרופיל
+  phone         String?
+  address       String?
+  birthDate     DateTime?
+  startDate     DateTime  @default(now())
+  endDate       DateTime?
+
+  // *** שדות מוצפנים AES-256-GCM ***
+  taxId         String?  // ת.ז (encrypted)
+  bank          String?  // JSON {bankName, branch, account} (encrypted)
+  salary        String?  // שכר חודשי (encrypted)
+  pensionFund   String?  // קופת פנסיה (encrypted)
+
+  // קשרים
+  documents     EmployeeDocument[]
+  shifts        Shift[]
+  availability  Availability[]
+  swapsFrom     ShiftSwap[]    @relation("SwapFrom")
+  swapsTo       ShiftSwap[]    @relation("SwapTo")
+  evaluations   Evaluation[]   @relation("EmployeeEvaluations")
+  evaluatorOf   Evaluation[]   @relation("EvaluatorOf")
+  kpis          KPI[]
+  accidents     AccidentReport[]
+  attendance    Attendance[]
+  feedback360Given    Feedback360[] @relation("FeedbackGiver")
+  feedback360Received Feedback360[] @relation("FeedbackReceiver")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum DocumentType {
+  ID_CARD          // תעודת זהות
+  PASSPORT         // דרכון
+  DRIVING_LICENSE  // רישיון נהיגה
+  HEALTH_CERT      // תעודת בריאות
+  FORM_101         // טופס 101
+  FORM_161         // טופס 161
+  INSURANCE        // ביטוח
+  CONTRACT         // הסכם עבודה
+  OTHER
+}
+
+model EmployeeDocument {
+  id            String       @id @default(cuid())
+  employeeId    String
+  employee      Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type          DocumentType
+  fileUrl       String       // נתיב לקובץ (PDF/IMG) – יכול להיות S3 / מקומי
+  fileName      String
+  signatureSvg  String?      // חתימת canvas (SVG/Base64) לטפסים 101/161/חוזה
+  signedAt      DateTime?
+  expiresAt     DateTime?    // לתעודות בעלות תפוגה (רישיון/בריאות)
+  notes         String?
+  uploadedAt    DateTime     @default(now())
+}
+
+// ==========================================================
+// משמרות + נוכחות
+// ==========================================================
+model Shift {
+  id            String       @id @default(cuid())
+  employeeId    String?      // null = משמרת לא משובצת (גרירה תשבץ)
+  employee      Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  date          DateTime
+  startTime     String       // "08:00"
+  endTime       String       // "16:00"
+  role          String?      // "קופאי", "מלצר" וכו'
+  location      String?      // סניף / מיקום
+  notes         String?
+  status        ShiftStatus  @default(SCHEDULED)
+  attendance    Attendance?
+  swapsFrom     ShiftSwap[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([date])
+  @@index([employeeId, date])
+}
+
+enum ShiftStatus {
+  SCHEDULED   // משובצת
+  IN_PROGRESS // בעיצומה
+  COMPLETED   // הסתיימה
+  MISSED      // החסיר
+  CANCELLED
+}
+
+model Attendance {
+  id            String     @id @default(cuid())
+  shiftId       String     @unique
+  shift         Shift      @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  clockInAt     DateTime?
+  clockOutAt    DateTime?
+  clockInMethod AuthMethod?  // ביומטרי / ידני / GPS
+  clockOutMethod AuthMethod?
+  clockInLat    Float?
+  clockInLng    Float?
+  clockOutLat   Float?
+  clockOutLng   Float?
+  notes         String?
+
+  @@index([employeeId])
+}
+
+enum AuthMethod {
+  PASSWORD
+  BIOMETRIC   // טביעת אצבע / Face ID (WebAuthn)
+  PIN
+  GPS
+}
+
+// זמינות העובד (לפני שיבוץ)
+model Availability {
+  id            String   @id @default(cuid())
+  employeeId    String
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date          DateTime
+  startTime     String   // "08:00"
+  endTime       String   // "20:00"
+  preference    Int      @default(0)  // 1 = מעדיף, 0 = יכול, -1 = מעדיף שלא
+  note          String?
+
+  @@unique([employeeId, date, startTime])
+}
+
+// בקשת החלפת משמרת
+model ShiftSwap {
+  id            String     @id @default(cuid())
+  shiftId       String     // המשמרת שמבקשים להחליף ממנה
+  shift         Shift      @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  fromEmployeeId String    // העובד שמבקש להחליף
+  fromEmployee  Employee   @relation("SwapFrom", fields: [fromEmployeeId], references: [id], onDelete: Cascade)
+  toEmployeeId  String?    // העובד שמתבקש להחליף איתו (אופציונלי)
+  toEmployee    Employee?  @relation("SwapTo", fields: [toEmployeeId], references: [id], onDelete: SetNull)
+  reason        String?
+  status        SwapStatus @default(PENDING)
+  managerNote   String?
+  approvedById  String?    // user id של המנהל שאישר
+  approvedAt    DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+enum SwapStatus {
+  PENDING            // מחכה לאישור עובד יעד
+  ACCEPTED_BY_PEER   // העובד השני אישר
+  APPROVED           // אושר על ידי מנהל
+  REJECTED
+  CANCELLED
+}
+
+// ==========================================================
+// הערכות + KPI + פידבק 360
+// ==========================================================
+enum EvaluationPeriod {
+  QUARTERLY
+  ANNUAL
+  PROBATION
+  ADHOC
+}
+
+model Evaluation {
+  id            String           @id @default(cuid())
+  employeeId    String
+  employee      Employee         @relation("EmployeeEvaluations", fields: [employeeId], references: [id], onDelete: Cascade)
+  evaluatorId   String
+  evaluator     Employee         @relation("EvaluatorOf",  fields: [evaluatorId], references: [id], onDelete: Cascade)
+  period        EvaluationPeriod
+  periodLabel   String           // "Q2-2026" / "2026"
+  scores        Json             // {"מקצועיות": 8, "שיתוף_פעולה": 9, ...}
+  overallScore  Float
+  goals         Json?            // יעדים לתקופה הבאה
+  comments      String?
+  signedSvg     String?          // חתימת המעריך (canvas)
+  createdAt     DateTime         @default(now())
+}
+
+model KPI {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  name        String   // "שעות שהושלמו", "מכירות", "שביעות רצון לקוח"
+  target      Float
+  actual      Float
+  unit        String?  // "₪", "%", "שעות"
+  period      String   // "2026-Q2"
+  weight      Float    @default(1.0)
+  createdAt   DateTime @default(now())
+
+  @@index([employeeId, period])
+}
+
+model Feedback360 {
+  id          String   @id @default(cuid())
+  giverId     String
+  giver       Employee @relation("FeedbackGiver",   fields: [giverId],   references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    Employee @relation("FeedbackReceiver",fields: [receiverId],references: [id], onDelete: Cascade)
+  period      String   // "2026-Q2"
+  relation    String   // "ממונה" / "עמית" / "כפיף" / "לקוח"
+  scores      Json     // {"תקשורת": 8, "אחריות": 9}
+  strengths   String?
+  improvements String?
+  anonymous   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// ==========================================================
+// תאונות עבודה
+// ==========================================================
+enum AccidentSeverity {
+  MINOR
+  MODERATE
+  SEVERE
+  FATAL
+}
+
+model AccidentReport {
+  id            String           @id @default(cuid())
+  employeeId    String
+  employee      Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  occurredAt    DateTime
+  location      String
+  description   String
+  severity      AccidentSeverity
+  bituachLeumiSubmitted Boolean  @default(false)
+  bituachLeumiRefNumber String?
+  daysOff       Int              @default(0)
+  attachments   Json?            // [{name, url}]
+  signedSvg     String?          // חתימת העובד / מנהל
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}

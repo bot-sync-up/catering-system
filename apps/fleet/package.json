@@ -1,0 +1,13 @@
+{
+  "name": "fleet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fleet management — api + web + mobile + shared",
+  "workspaces": ["api", "web", "mobile", "shared"],
+  "scripts": {
+    "dev": "echo 'Run separately per workspace'",
+    "dev:api": "npm --workspace api run dev",
+    "dev:web": "npm --workspace web run dev",
+    "dev:mobile": "npm --workspace mobile run start"
+  }
+}

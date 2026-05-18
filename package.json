@@ -1,0 +1,41 @@
+{
+  "name": "catering-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Catering & business operations monorepo - 9 worktrees unified (INT1-5 + Sealing 2-5)",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rimraf node_modules",
+    "db:migrate": "pnpm --filter @catering/db migrate",
+    "db:generate": "pnpm --filter @catering/db generate",
+    "db:seed": "pnpm --filter @catering/db seed",
+    "orchestrator:dev": "pnpm --filter @catering/orchestrator dev",
+    "orchestrator:test": "pnpm --filter @catering/orchestrator test",
+    "docker:up": "docker compose -f deployment/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f deployment/docker/docker-compose.yml down",
+    "k8s:apply": "kubectl apply -f production-pack/k8s/",
+    "loadtest:smoke": "pnpm --dir production-pack/load-tests test:smoke"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.6.3",
+    "@types/node": "^22.10.0",
+    "prettier": "^3.4.0",
+    "eslint": "^9.16.0",
+    "rimraf": "^6.0.1",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {}
+  }
+}

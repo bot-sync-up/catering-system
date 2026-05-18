@@ -1,0 +1,85 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".env", ".env.local", "tsconfig.base.json"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "DATABASE_REPLICA_URL",
+    "REDIS_URL",
+    "REDIS_STREAMS_URL",
+    "JWT_SECRET",
+    "JWT_PUBLIC_KEY",
+    "JWT_PRIVATE_KEY",
+    "NEXTAUTH_SECRET",
+    "NEXTAUTH_URL",
+    "SENDGRID_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "ICOUNT_API_TOKEN",
+    "CARDCOM_TERMINAL",
+    "CARDCOM_USERNAME",
+    "CARDCOM_API_NAME",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_REGION",
+    "S3_BUCKET",
+    "KMS_KEY_ID",
+    "OTP_HMAC_SECRET",
+    "ENCRYPTION_KEY",
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "TWILIO_FROM",
+    "SENTRY_DSN",
+    "DATADOG_API_KEY",
+    "BULL_BOARD_USER",
+    "BULL_BOARD_PASS"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**",
+        "build/**",
+        "out/**"
+      ],
+      "env": ["NODE_ENV"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": ["^lint"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "env": ["NODE_ENV"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "clean": {
+      "cache": false
+    },
+    "db:migrate": {
+      "cache": false,
+      "persistent": false
+    },
+    "db:generate": {
+      "outputs": ["node_modules/.prisma/**", "generated/**"]
+    },
+    "db:seed": {
+      "cache": false,
+      "persistent": false
+    }
+  }
+}
