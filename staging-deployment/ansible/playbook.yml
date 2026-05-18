@@ -1,0 +1,98 @@
+---
+###############################################################################
+# Provision staging VPS
+#
+# הרצה:
+#   ansible-playbook -i inventory.staging playbook.yml \
+#       --extra-vars "domain=staging.catering.co.il acme_email=ops@catering.co.il"
+###############################################################################
+
+- name: Provision staging hosts
+  hosts: staging_app
+  become: true
+  gather_facts: true
+
+  vars:
+    docker_compose_version: "v2.27.0"
+    nginx_user: "www-data"
+    acme_email: "{{ acme_email | default('ops@catering.co.il') }}"
+    domains:
+      - staging.catering.co.il
+      - api.staging.catering.co.il
+      - portal.staging.catering.co.il
+      - admin.staging.catering.co.il
+      - grafana.staging.catering.co.il
+    project_root: "/opt/catering-staging"
+
+  pre_tasks:
+    - name: עדכון מטמון apt
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: התקנת חבילות בסיס
+      apt:
+        name:
+          - curl
+          - jq
+          - htop
+          - rsync
+          - git
+          - ufw
+          - fail2ban
+          - python3-pip
+          - python3-setuptools
+          - unattended-upgrades
+        state: present
+
+    - name: הגדרת locale
+      community.general.locale_gen:
+        name: he_IL.UTF-8
+        state: present
+      ignore_errors: true
+
+    - name: יצירת תיקיית פרויקט
+      file:
+        path: "{{ project_root }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+  roles:
+    - role: docker
+      tags: [docker]
+    - role: nginx
+      tags: [nginx]
+    - role: monitoring
+      tags: [monitoring]
+
+  post_tasks:
+    - name: ודא ש-fail2ban פעיל
+      service:
+        name: fail2ban
+        state: started
+        enabled: true
+
+    - name: הגדרת unattended-upgrades
+      copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+          APT::Periodic::AutocleanInterval "7";
+
+    - name: פתיחת UFW לפורטים נחוצים בלבד
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "22"
+        - "80"
+        - "443"
+
+    - name: הפעלת UFW
+      ufw:
+        state: enabled
+        policy: deny

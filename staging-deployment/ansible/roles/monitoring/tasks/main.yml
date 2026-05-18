@@ -1,0 +1,57 @@
+---
+- name: יצירת תיקיית monitoring
+  file:
+    path: "{{ project_root }}/monitoring"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: יצירת תיקיות סוב לקונפיג
+  file:
+    path: "{{ project_root }}/monitoring/{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  loop:
+    - prometheus
+    - grafana/datasources
+    - grafana/dashboards
+    - alertmanager
+
+- name: עותק docker-compose עבור monitoring
+  template:
+    src: docker-compose.monitoring.yml.j2
+    dest: "{{ project_root }}/monitoring/docker-compose.yml"
+    mode: "0644"
+
+- name: כתיבת prometheus.yml
+  template:
+    src: prometheus.yml.j2
+    dest: "{{ project_root }}/monitoring/prometheus/prometheus.yml"
+    mode: "0644"
+
+- name: כתיבת datasource ל-Grafana
+  template:
+    src: grafana-datasource.yml.j2
+    dest: "{{ project_root }}/monitoring/grafana/datasources/datasource.yml"
+    mode: "0644"
+
+- name: הפעלת monitoring stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ project_root }}/monitoring"
+    state: present
+    pull: missing
+  become_user: "{{ ansible_user }}"
+
+- name: התקנת node_exporter
+  apt:
+    name: prometheus-node-exporter
+    state: present
+
+- name: שירות node_exporter דולק
+  service:
+    name: prometheus-node-exporter
+    state: started
+    enabled: true

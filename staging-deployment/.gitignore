@@ -1,0 +1,25 @@
+# Secrets
+.env
+.env.staging
+.env.staging.local
+*.pem
+*.key
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfplan
+crash.log
+
+# Ansible
+*.retry
+ansible/collections/
+inventory.staging.local
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
