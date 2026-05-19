@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- מחרוזות בעברית - RTL -->
+    <string name="app_name">קייטרינג</string>
+    <string name="login_title">כניסה</string>
+    <string name="login_email">דוא״ל</string>
+    <string name="login_password">סיסמה</string>
+    <string name="login_submit">התחבר</string>
+    <string name="login_biometric">התחבר עם זיהוי ביומטרי</string>
+    <string name="logout">התנתק</string>
+    <string name="role_manager">מנהל</string>
+    <string name="role_agent">סוכן מכירות</string>
+    <string name="role_kitchen">מטבח</string>
+    <string name="role_shift">משמרת</string>
+    <string name="role_driver">נהג</string>
+    <string name="role_customer">לקוח</string>
+    <string name="nav_dashboard">לוח בקרה</string>
+    <string name="nav_orders">הזמנות</string>
+    <string name="nav_tasks">משימות</string>
+    <string name="nav_deliveries">משלוחים</string>
+    <string name="nav_settings">הגדרות</string>
+    <string name="clock_in">החתמת כניסה</string>
+    <string name="clock_out">החתמת יציאה</string>
+    <string name="mark_done">סמן כהושלם</string>
+    <string name="upload_proof">העלאת תיעוד מסירה</string>
+    <string name="scan_invoice">סריקת חשבונית</string>
+    <string name="sign_here">חתום כאן</string>
+    <string name="capture_signature">לכידת חתימה</string>
+    <string name="error_network">שגיאת רשת</string>
+    <string name="offline_banner">מצב לא מקוון — השינויים יסונכרנו אוטומטית</string>
+
+    <!-- Roles + Dashboards -->
+    <string name="dashboard_title">לוח בקרה</string>
+    <string name="today_orders">הזמנות היום</string>
+    <string name="pending_payments">תשלומים ממתינים</string>
+    <string name="active_shifts">משמרות פעילות</string>
+    <string name="open_tasks">משימות פתוחות</string>
+
+    <!-- CRM -->
+    <string name="crm_title">ניהול לקוחות</string>
+    <string name="lead_title">ליד</string>
+    <string name="new_lead">ליד חדש</string>
+    <string name="call_now">חייג עכשיו</string>
+    <string name="add_note">הוסף הערה</string>
+
+    <!-- Kitchen -->
+    <string name="prep_tasks">משימות הכנה</string>
+    <string name="prep_done">הכנה הושלמה</string>
+
+    <!-- Shift -->
+    <string name="my_shifts">המשמרות שלי</string>
+    <string name="request_swap">בקשת החלפה</string>
+
+    <!-- Driver -->
+    <string name="deliveries_title">משלוחים</string>
+    <string name="navigate_to">נווט אל</string>
+    <string name="delivered">נמסר</string>
+
+    <!-- Customer -->
+    <string name="my_orders">ההזמנות שלי</string>
+    <string name="new_order">הזמנה חדשה</string>
+    <string name="order_status">סטטוס הזמנה</string>
+    <string name="status_pending">ממתין</string>
+    <string name="status_confirmed">אושר</string>
+    <string name="status_in_prep">בהכנה</string>
+    <string name="status_on_route">בדרך</string>
+    <string name="status_delivered">נמסר</string>
+
+    <!-- Notifications channels -->
+    <string name="channel_orders">הזמנות</string>
+    <string name="channel_payments">תשלומים</string>
+    <string name="channel_shifts">משמרות</string>
+    <string name="channel_tasks">משימות</string>
+    <string name="channel_geofence">איזורי גידור</string>
+
+    <!-- DND -->
+    <string name="dnd_quiet_hours">שעות שקטות (22:00 - 08:00)</string>
+    <string name="dnd_enabled">מצב שקט מופעל</string>
+</resources>
