@@ -1,0 +1,135 @@
+name: Performance Regression
+
+on:
+  schedule:
+    - cron: '0 2 * * *'        # יומי 02:00 UTC = 04:00/05:00 ישראל
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'URL סביבה לבדיקה'
+        required: true
+        default: 'https://staging.syncup.co.il'
+      scripts:
+        description: 'אילו k6 scripts להריץ (CSV)'
+        required: false
+        default: 'ordering-baseline,portal-browse,event-creation'
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+env:
+  BASELINE_REGRESSION_PCT: 10
+  WARN_REGRESSION_PCT: 5
+  RESULTS_DIR: performance/reports/ci
+
+jobs:
+  k6:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        script:
+          - ordering-baseline
+          - portal-browse
+          - event-creation
+          - payment-flow
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup k6
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Run k6 ${{ matrix.script }}
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || secrets.PERF_BASE_URL }}
+          TEST_PASSWORD: ${{ secrets.PERF_TEST_PASSWORD }}
+          CARDCOM_SANDBOX: '1'
+        run: |
+          mkdir -p $RESULTS_DIR
+          k6 run \
+            --summary-export=$RESULTS_DIR/${{ matrix.script }}.json \
+            --out json=$RESULTS_DIR/${{ matrix.script }}-raw.json \
+            performance/scripts/${{ matrix.script }}.js
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-${{ matrix.script }}-${{ github.run_id }}
+          path: ${{ env.RESULTS_DIR }}/${{ matrix.script }}*.json
+          retention-days: 30
+
+  compare:
+    needs: k6
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Restore baseline
+        uses: actions/cache@v4
+        with:
+          path: performance/reports/baseline-history
+          key: perf-baseline-history-${{ github.ref_name }}
+          restore-keys: |
+            perf-baseline-history-main
+
+      - name: Compare to baseline
+        id: compare
+        run: node performance/scripts/compare-to-baseline.js
+        env:
+          ARTIFACTS_DIR: artifacts
+          BASELINE_DIR: performance/reports/baseline-history
+          FAIL_PCT: ${{ env.BASELINE_REGRESSION_PCT }}
+          WARN_PCT: ${{ env.WARN_REGRESSION_PCT }}
+
+      - name: Save new baseline
+        if: github.ref == 'refs/heads/main' && steps.compare.outputs.status == 'pass'
+        uses: actions/cache/save@v4
+        with:
+          path: performance/reports/baseline-history
+          key: perf-baseline-history-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Post summary to job
+        if: always()
+        run: cat performance/reports/ci/summary.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Open issue on regression
+        if: failure() && steps.compare.outputs.status == 'fail'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('performance/reports/ci/summary.md', 'utf8');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[perf] רגרסיה ביצועים מעל ${process.env.BASELINE_REGRESSION_PCT}% — ${new Date().toISOString().slice(0,10)}`,
+              body,
+              labels: ['performance', 'regression', 'high-priority'],
+            });
+
+      - name: Slack alert
+        if: failure() && steps.compare.outputs.status == 'fail'
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_PERF_WEBHOOK }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK" ]; then
+            curl -X POST -H 'Content-Type: application/json' "$SLACK_WEBHOOK" \
+              --data "{\"text\":\":rotating_light: רגרסיה ביצועים מעל ${BASELINE_REGRESSION_PCT}%. ראה https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+          fi
