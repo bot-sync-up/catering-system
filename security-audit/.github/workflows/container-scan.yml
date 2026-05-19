@@ -1,0 +1,145 @@
+name: Container Image Scan
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/Dockerfile'
+      - '**/docker-compose*.yml'
+  pull_request:
+    paths:
+      - '**/Dockerfile'
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Image to scan (e.g. myorg/app:tag)'
+        required: false
+
+permissions:
+  contents: read
+  security-events: write
+  packages: read
+
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - id: meta
+        run: echo "image=local/scan-target:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  trivy:
+    name: Trivy
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'HIGH,CRITICAL'
+          format: 'sarif'
+          output: 'trivy-fs.sarif'
+          exit-code: '0'
+          ignore-unfixed: true
+
+      - name: Trivy image scan
+        if: needs.build.result == 'success'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.build.outputs.image }}
+          severity: 'HIGH,CRITICAL'
+          format: 'sarif'
+          output: 'trivy-image.sarif'
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Trivy config (Dockerfile/IaC)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          format: 'sarif'
+          output: 'trivy-config.sarif'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
+
+      - name: Upload SARIF (fs)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+      - name: Upload SARIF (image)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+      - name: Upload SARIF (config)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-config.sarif
+          category: trivy-config
+
+  grype:
+    name: Grype
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anchore/scan-action@v3
+        id: grype
+        with:
+          image: ${{ needs.build.outputs.image }}
+          severity-cutoff: high
+          fail-build: true
+          output-format: sarif
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.grype.outputs.sarif }}
+          category: grype
+
+  enforce-thresholds:
+    name: Enforce severity thresholds
+    needs: [trivy, grype]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check thresholds
+        run: |
+          python3 <<'PY'
+          import yaml, sys
+          with open('security-audit/policies/severity-thresholds.yml') as f:
+              policy = yaml.safe_load(f)
+          # Fail if upstream jobs failed AND policy says block
+          trivy = "${{ needs.trivy.result }}"
+          grype = "${{ needs.grype.result }}"
+          if policy['block_on_critical'] and (trivy == 'failure' or grype == 'failure'):
+              print("BLOCK: HIGH/CRITICAL vulns detected", file=sys.stderr)
+              sys.exit(1)
+          PY

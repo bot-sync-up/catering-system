@@ -1,0 +1,31 @@
+# Snyk policy file
+# https://docs.snyk.io/snyk-cli/test-for-vulnerabilities/the-.snyk-file
+
+version: v1.25.0
+
+# Patches Snyk applies automatically
+patch: {}
+
+# Ignored vulnerabilities (must have justification + expiry)
+ignore:
+  # Example: known false positive in lodash transitive dep
+  # SNYK-JS-LODASH-567746:
+  #   - '*':
+  #       reason: "Not exploitable - only server-side, no user input reaches sink"
+  #       expires: '2026-12-31T00:00:00.000Z'
+  #       created: '2025-01-15T00:00:00.000Z'
+
+# Severity threshold for failing builds
+language-settings:
+  javascript:
+    severity-threshold: high
+  python:
+    severity-threshold: high
+
+exclude:
+  global:
+    - node_modules
+    - "**/test/**"
+    - "**/tests/**"
+    - "**/*.test.*"
+    - "**/__mocks__/**"

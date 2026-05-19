@@ -1,0 +1,6 @@
+id,discovered_at,test_tool,severity,cvss,cwe,owasp,title,endpoint,description,status,assigned_to,sla_due,verified_fixed_at,verified_by,reference_pr,notes
+F-001,2026-01-15,manual,critical,9.8,CWE-89,A03:2021,SQL injection ב-/api/search,GET /api/search,Parameter q not parameterized,open,backend-lead,2026-01-22,,,,
+F-002,2026-01-15,test_idor.py,high,7.5,CWE-639,A01:2021,IDOR בגישה לחשבוניות,GET /api/invoices/:id,Cross-user read possible,open,backend-lead,2026-02-14,,,,
+F-003,2026-01-16,test_rate_limit.py,high,7.5,CWE-307,A07:2021,חוסר rate limit ב-login,POST /api/auth/login,No 429 after 100 attempts,open,security,2026-02-15,,,,
+F-004,2026-01-16,test_xss.py,medium,5.3,CWE-693,A05:2021,חוסר X-Frame-Options,GET /,Missing security header,open,frontend,2026-04-16,,,,
+F-005,2026-01-17,nuclei,low,3.7,CWE-200,A05:2021,גרסת nginx נחשפת,GET /,Server: nginx/1.18.0,open,devops,2026-07-17,,,,

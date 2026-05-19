@@ -1,0 +1,13 @@
+reports/*.json
+reports/*.log
+reports/*.html
+reports/*.xml
+reports/zap-*/
+reports/auto-fix-*.log*
+reports/pentest-*.log
+!reports/template-pentest-report.md
+!reports/findings-tracker.csv
+__pycache__/
+*.pyc
+.venv/
+venv/

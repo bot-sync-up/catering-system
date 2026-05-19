@@ -1,0 +1,36 @@
+# Severity thresholds for blocking CI/CD pipelines
+
+# Container scanning (Trivy/Grype)
+block_on_critical: true
+block_on_high: true
+warn_on_medium: true
+ignore_low: true
+ignore_unfixed: true   # don't fail if no patch available
+
+# Production gates (must pass before deploy)
+production_gates:
+  max_critical: 0
+  max_high: 0
+  max_medium: 5
+  max_low: 20
+
+# Staging gates (more lenient)
+staging_gates:
+  max_critical: 0
+  max_high: 3
+  max_medium: 15
+  max_low: 100
+
+# SLA for remediation (calendar days)
+remediation_sla:
+  critical: 7
+  high: 30
+  medium: 90
+  low: 180
+
+# Auto-create issues
+auto_issue:
+  enabled: true
+  severities: [critical, high]
+  labels: [security, auto-generated]
+  assignees: [security-lead]

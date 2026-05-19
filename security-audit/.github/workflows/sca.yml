@@ -1,0 +1,125 @@
+name: SCA - Software Composition Analysis
+
+on:
+  pull_request:
+    paths:
+      - '**/package.json'
+      - '**/package-lock.json'
+      - '**/requirements*.txt'
+      - '**/Pipfile.lock'
+      - '**/go.sum'
+      - '**/Cargo.lock'
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    if: hashFiles('**/package-lock.json') != ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: npm audit (JSON)
+        run: |
+          npm audit --json > npm-audit.json || true
+          npm audit --audit-level=high
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit
+          path: npm-audit.json
+
+  snyk-oss:
+    name: Snyk Open Source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: snyk/actions/setup@master
+      - name: Snyk test
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          snyk test \
+            --all-projects \
+            --severity-threshold=high \
+            --policy-path=security-audit/configs/snyk.yml \
+            --sarif-file-output=snyk-oss.sarif || true
+
+      - name: Snyk monitor (main only)
+        if: github.ref == 'refs/heads/main'
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk monitor --all-projects
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-oss.sarif
+          category: snyk-oss
+
+  dependency-check:
+    name: OWASP Dependency-Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: ${{ github.event.repository.name }}
+          path: '.'
+          format: 'ALL'
+          args: >
+            --suppression security-audit/policies/allowlist.yml
+            --enableRetired
+            --failOnCVSS 7
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: reports
+
+  auto-fix:
+    name: Auto-fix vulnerabilities
+    needs: npm-audit
+    if: github.event_name == 'pull_request' && needs.npm-audit.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run auto-fix
+        run: bash security-audit/scripts/auto-fix-vulns.sh
+
+      - name: Commit fixes
+        run: |
+          git config user.name "security-bot"
+          git config user.email "security-bot@users.noreply.github.com"
+          git add package-lock.json package.json
+          git diff --staged --quiet || git commit -m "fix(security): auto-fix npm vulnerabilities"
+          git push || true
