@@ -1,0 +1,87 @@
+{
+  "name": "catering-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Catering & business operations monorepo - 9 worktrees unified (INT1-5 + Sealing 2-5)",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rimraf node_modules",
+    "db:migrate": "pnpm --filter @aneh-hashoel/db migrate:deploy",
+    "db:migrate:dev": "pnpm --filter @aneh-hashoel/db migrate:dev",
+    "db:generate": "pnpm --filter @aneh-hashoel/db generate",
+    "db:seed": "pnpm --filter @aneh-hashoel/db db:seed",
+    "orchestrator:dev": "pnpm --filter @syncup/orchestrator dev",
+    "orchestrator:test": "pnpm --filter @syncup/orchestrator test",
+    "docker:up": "docker compose -f deployment/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f deployment/docker/docker-compose.yml down",
+    "k8s:apply": "kubectl apply -f production-pack/k8s/",
+    "loadtest:smoke": "pnpm --dir production-pack/load-tests test:smoke",
+    "bootstrap:fix": "bash bootstrap/scripts/fix-all.sh .",
+    "bootstrap:health": "tsx bootstrap/scripts/health-check.ts"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "5.6.3",
+    "@types/node": "^22.10.0",
+    "prettier": "^3.4.0",
+    "eslint": "^9.16.0",
+    "rimraf": "^6.0.1",
+    "vitest": "^2.1.8",
+    "tsx": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "react": "19.0.0",
+      "react-dom": "19.0.0",
+      "@types/react": "19.0.0",
+      "@types/react-dom": "19.0.0",
+      "next": "15.1.3",
+      "eslint-config-next": "15.1.3",
+      "typescript": "5.6.3",
+      "@types/node": "22.10.0",
+      "prisma": "5.22.0",
+      "@prisma/client": "5.22.0",
+      "zod": "3.23.8",
+      "bullmq": "5.34.0",
+      "ioredis": "5.4.2",
+      "date-fns": "4.1.0",
+      "express": "4.21.2",
+      "@types/express": "4.17.21",
+      "@trpc/server": "11.0.0-rc.648",
+      "@trpc/client": "11.0.0-rc.648",
+      "@trpc/react-query": "11.0.0-rc.648",
+      "@trpc/next": "11.0.0-rc.648",
+      "@tanstack/react-query": "5.62.0",
+      "vitest": "2.1.8"
+    },
+    "overridesNotes": "react/react-dom and @types/react 19 are forced globally. Mobile apps (@field-ops/mobile, fleet-driver) are explicitly exempted below via peerDependencyRules.",
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "react": "18.2.0 || 19.0.0",
+        "react-dom": "18.2.0 || 19.0.0"
+      },
+      "ignoreMissing": [
+        "react-native",
+        "@react-native/*"
+      ]
+    },
+    "packageExtensions": {
+      "@field-ops/ui": {
+        "peerDependencies": {
+          "react": "^18.2.0",
+          "react-native": ">=0.74.0 <0.75.0"
+        }
+      }
+    }
+  }
+}
