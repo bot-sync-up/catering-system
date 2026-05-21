@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# catering-stop — עצור הכול בעדינות
+source "$(dirname "$0")/_common.sh"
+
+APP_DIR="$(find_app_dir)"
+cd "$APP_DIR"
+
+title "עוצר את מערכת הקייטרינג..."
+
+# dev server
+if [ -f .yolo-logs/dev.pid ]; then
+  PID=$(cat .yolo-logs/dev.pid)
+  if kill -0 "$PID" 2>/dev/null; then
+    kill "$PID" 2>/dev/null || true
+    sleep 2
+    kill -9 "$PID" 2>/dev/null || true
+    ok "dev server נעצר (PID $PID)"
+  fi
+  rm -f .yolo-logs/dev.pid
+fi
+
+require_docker
+COMPOSE="$(find_compose_file "$APP_DIR")"
+if [ -n "$COMPOSE" ]; then
+  docker compose -f "$COMPOSE" down
+  ok "containers נעצרו ($COMPOSE)"
+fi
+
+ok "הכול הופסק"

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# catering-update — קיצור ל-update.sh
+source "$(dirname "$0")/_common.sh"
+
+APP_DIR="$(find_app_dir)"
+SCRIPT="$APP_DIR/release-bundle/update.sh"
+
+[ -f "$SCRIPT" ] || { err "לא נמצא: $SCRIPT"; exit 1; }
+cd "$APP_DIR"
+exec bash "$SCRIPT" "$@"

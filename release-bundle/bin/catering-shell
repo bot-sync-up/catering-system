@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# catering-shell — קונסולה למסד נתונים / redis / node
+# שימוש: catering-shell [psql|redis|node|sh] [service-name]
+source "$(dirname "$0")/_common.sh"
+
+APP_DIR="$(find_app_dir)"
+cd "$APP_DIR"
+
+require_docker
+COMPOSE="$(find_compose_file "$APP_DIR")"
+[ -z "$COMPOSE" ] && { err "לא נמצא compose"; exit 1; }
+
+TARGET="${1:-menu}"
+SERVICE_OVERRIDE="${2:-}"
+
+choose_menu() {
+  echo "בחר shell:"
+  echo "  1) psql   — PostgreSQL"
+  echo "  2) redis  — redis-cli"
+  echo "  3) node   — REPL ב-API container"
+  echo "  4) sh     — bash בקונטיינר האפליקציה"
+  echo "  q) יציאה"
+  read -rp "> " choice
+  case "$choice" in
+    1|psql)  TARGET=psql ;;
+    2|redis) TARGET=redis ;;
+    3|node)  TARGET=node ;;
+    4|sh)    TARGET=sh ;;
+    q|Q) exit 0 ;;
+    *) err "לא מוכר"; exit 1 ;;
+  esac
+}
+
+[ "$TARGET" = "menu" ] && choose_menu
+
+find_service_by_pattern() {
+  local pattern="$1"
+  docker compose -f "$COMPOSE" ps --services 2>/dev/null | grep -Ei "$pattern" | head -n1
+}
+
+case "$TARGET" in
+  psql)
+    SVC="${SERVICE_OVERRIDE:-$(find_service_by_pattern '^(postgres|db)$')}"
+    [ -z "$SVC" ] && SVC=$(find_service_by_pattern 'postgres|db')
+    [ -z "$SVC" ] && { err "container postgres לא נמצא"; exit 1; }
+    info "מתחבר אל $SVC"
+    docker compose -f "$COMPOSE" exec "$SVC" \
+      psql -U "${POSTGRES_USER:-catering}" -d "${POSTGRES_DB:-catering}"
+    ;;
+  redis)
+    SVC="${SERVICE_OVERRIDE:-$(find_service_by_pattern 'redis')}"
+    [ -z "$SVC" ] && { err "container redis לא נמצא"; exit 1; }
+    info "מתחבר אל $SVC"
+    if [ -n "${REDIS_PASSWORD:-}" ]; then
+      docker compose -f "$COMPOSE" exec "$SVC" redis-cli -a "$REDIS_PASSWORD"
+    else
+      docker compose -f "$COMPOSE" exec "$SVC" redis-cli
+    fi
+    ;;
+  node)
+    SVC="${SERVICE_OVERRIDE:-$(find_service_by_pattern 'api|web|app')}"
+    [ -z "$SVC" ] && { err "container אפליקציה לא נמצא"; exit 1; }
+    info "Node REPL ב-$SVC"
+    docker compose -f "$COMPOSE" exec "$SVC" node
+    ;;
+  sh|bash)
+    SVC="${SERVICE_OVERRIDE:-$(find_service_by_pattern 'api|web|app')}"
+    [ -z "$SVC" ] && { err "container אפליקציה לא נמצא"; exit 1; }
+    info "shell ב-$SVC"
+    docker compose -f "$COMPOSE" exec "$SVC" sh -c 'command -v bash >/dev/null && bash || sh'
+    ;;
+  *)
+    err "מוכרים: psql, redis, node, sh"
+    exit 1
+    ;;
+esac

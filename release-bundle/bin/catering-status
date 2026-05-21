@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# catering-status — תצוגת סטטוס מלאה
+source "$(dirname "$0")/_common.sh"
+
+APP_DIR="$(find_app_dir)"
+cd "$APP_DIR"
+
+title "═══════════════════════════════════════════════════════"
+title "  סטטוס מערכת הקייטרינג"
+title "═══════════════════════════════════════════════════════"
+echo ""
+
+# Git
+if [ -d .git ]; then
+  echo "📁 תיקיה:       $APP_DIR"
+  echo "🌿 ענף:         $(git rev-parse --abbrev-ref HEAD)"
+  echo "🔖 commit:      $(git rev-parse --short HEAD)"
+  echo "📅 תאריך:       $(git log -1 --format=%cd --date=short)"
+fi
+echo ""
+
+# Compose
+require_docker
+COMPOSE="$(find_compose_file "$APP_DIR")"
+if [ -n "$COMPOSE" ]; then
+  title "🐳 Containers ($COMPOSE):"
+  docker compose -f "$COMPOSE" ps
+  echo ""
+fi
+
+# dev server
+title "🚀 Dev server:"
+if [ -f .yolo-logs/dev.pid ]; then
+  PID=$(cat .yolo-logs/dev.pid)
+  if kill -0 "$PID" 2>/dev/null; then
+    ok "רץ (PID $PID)"
+  else
+    err "לא רץ (PID $PID דד)"
+  fi
+else
+  warn "לא הופעל"
+fi
+echo ""
+
+# Health check
+title "❤️  Health:"
+HEALTH_URL="${HEALTH_URL:-http://localhost:3000/api/health}"
+if curl -fsS --max-time 5 "$HEALTH_URL" >/dev/null 2>&1; then
+  ok "$HEALTH_URL → OK"
+else
+  err "$HEALTH_URL → לא מגיב"
+fi
+echo ""
+
+# Disk / RAM
+title "💾 משאבים:"
+if command -v free >/dev/null 2>&1; then
+  free -h | awk '/Mem:/ {printf "  RAM:    %s used / %s total\n", $3, $2}'
+fi
+df -h "$APP_DIR" 2>/dev/null | awk 'NR==2 {printf "  Disk:   %s used / %s total (%s free)\n", $3, $2, $4}'
+echo ""
+
+# Docker stats מהירים
+if [ -n "$COMPOSE" ]; then
+  title "📊 שימוש משאבים ע\"י containers:"
+  docker stats --no-stream --format "  {{.Name}}: CPU {{.CPUPerc}} · RAM {{.MemUsage}}" \
+    $(docker compose -f "$COMPOSE" ps -q) 2>/dev/null || true
+fi

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# catering-start — הפעל את כל ה-services + dev server
+source "$(dirname "$0")/_common.sh"
+
+require_docker
+APP_DIR="$(find_app_dir)"
+cd "$APP_DIR"
+
+COMPOSE="$(find_compose_file "$APP_DIR")"
+[ -z "$COMPOSE" ] && { err "לא נמצא קובץ docker-compose"; exit 1; }
+
+title "מפעיל את מערכת הקייטרינג..."
+info "Compose file: $COMPOSE"
+docker compose -f "$COMPOSE" up -d
+ok "containers רצים"
+
+# dev server רק אם זה לא production
+if [[ "$COMPOSE" != *"prod"* ]]; then
+  mkdir -p .yolo-logs
+  if [ -f .yolo-logs/dev.pid ] && kill -0 "$(cat .yolo-logs/dev.pid)" 2>/dev/null; then
+    info "dev server כבר רץ (PID $(cat .yolo-logs/dev.pid))"
+  else
+    nohup pnpm dev > .yolo-logs/dev.log 2>&1 &
+    echo $! > .yolo-logs/dev.pid
+    ok "dev server הופעל (PID $(cat .yolo-logs/dev.pid))"
+  fi
+fi
+
+echo ""
+ok "המערכת זמינה ב-http://localhost:3000"
