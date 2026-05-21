@@ -1,0 +1,52 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+#
+# Vagrantfile — סביבת VM מוכנה לפיתוח (אופציונלי).
+# שימוש:
+#   vagrant up                  # בונה ומפעיל VM
+#   vagrant ssh                 # נכנס פנימה
+#   vagrant halt                # עוצר
+#   vagrant destroy -f          # מוחק
+#
+# בתוך ה-VM תמצאו את הרפו ממופה אל /home/vagrant/catering ועם כל הכלים מותקנים.
+# פותחים:
+#   http://localhost:3000  -> אפליקציה
+#   http://localhost:8025  -> MailHog
+#   http://localhost:9001  -> MinIO console
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"  # Ubuntu 22.04 LTS
+  config.vm.hostname = "catering-dev"
+
+  # ===== חיבור רשת =====
+  # forward של כל הפורטים הרלוונטיים מה-host אל ה-guest
+  config.vm.network "forwarded_port", guest: 3000, host: 3000, host_ip: "127.0.0.1"  # app
+  config.vm.network "forwarded_port", guest: 5432, host: 5432, host_ip: "127.0.0.1"  # postgres
+  config.vm.network "forwarded_port", guest: 6379, host: 6379, host_ip: "127.0.0.1"  # redis
+  config.vm.network "forwarded_port", guest: 1025, host: 1025, host_ip: "127.0.0.1"  # mailhog smtp
+  config.vm.network "forwarded_port", guest: 8025, host: 8025, host_ip: "127.0.0.1"  # mailhog ui
+  config.vm.network "forwarded_port", guest: 9000, host: 9000, host_ip: "127.0.0.1"  # minio api
+  config.vm.network "forwarded_port", guest: 9001, host: 9001, host_ip: "127.0.0.1"  # minio console
+
+  # ===== מיפוי תיקיות =====
+  # הרפו המקומי ממופה לתיקיית הבית של vagrant. השינויים מסונכרנים דו-כיוונית.
+  config.vm.synced_folder "..", "/home/vagrant/catering", type: "virtualbox",
+                          owner: "vagrant", group: "vagrant"
+
+  # ===== משאבים =====
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "catering-dev"
+    vb.cpus = 4
+    vb.memory = 8192   # 8GB
+    vb.customize ["modifyvm", :id, "--ioapic", "on"]
+  end
+
+  # provider תואם נוסף (libvirt על Linux)
+  config.vm.provider "libvirt" do |lv|
+    lv.cpus = 4
+    lv.memory = 8192
+  end
+
+  # ===== Provision =====
+  config.vm.provision "shell", path: "scripts/vagrant-provision.sh", privileged: false
+end
