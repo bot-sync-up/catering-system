@@ -15,6 +15,7 @@ packages/
 ├── queue/           # @catering/queue     — BullMQ producers/consumers
 ├── utils/           # @catering/utils     — תאריכים עבריים, מטבע, אזורי זמן
 ├── config/          # @catering/config    — טעינת ENV עם validation
+├── innovation/      # @syncup/innovation  — AI image, QR, Passkeys, AR, Plate quality, Voice, Drone, Blockchain, RPA
 └── integrations/
     ├── icount/      # @catering/integrations-icount   — חשבוניות iCount
     ├── cardcom/     # @catering/integrations-cardcom  — סליקה Cardcom

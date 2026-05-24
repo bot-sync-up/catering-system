@@ -1,0 +1,33 @@
+import { Meta } from "@storybook/blocks";
+
+<Meta title="Introduction" />
+
+# Sync Up Catering — Storybook
+
+ספריית הקומפוננטות הרשמית של Sync Up.
+
+- **RTL** מופעל כברירת מחדל. Toolbar למעלה מאפשר מעבר ל-LTR.
+- **Theme** Light / Dark.
+- **A11y** addon רץ על כל סטורי — צריך לעבור ירוק.
+- **Chromatic** מריץ visual regression על כל PR.
+
+## חבילות מקור
+
+- `@syncup/ui` — קומפוננטות web (React)
+- `@syncup/ui-mobile` — קומפוננטות mobile (React Native)
+- `@syncup/innovation` — קומפוננטות חדשניות (AR, QR Scanner, Passkey Setup)
+
+## איך להוסיף סטורי
+
+צרו קובץ `*.stories.tsx` ליד הקומפוננטה ב-`packages/ui/src/...`:
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react";
+import { Button } from "./Button";
+
+const meta: Meta<typeof Button> = { component: Button };
+export default meta;
+type Story = StoryObj<typeof Button>;
+
+export const Default: Story = { args: { children: "לחצו" } };
+```

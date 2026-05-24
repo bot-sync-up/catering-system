@@ -1,0 +1,537 @@
+openapi: 3.1.0
+info:
+  title: Sync Up Catering API
+  version: 1.0.0
+  description: |
+    API ציבורי של פלטפורמת Sync Up Catering, נוצר אוטומטית מ-tRPC routers.
+    תיעוד עברית מלא נמצא ב-`EXAMPLES.md`, `AUTHENTICATION.md`, `WEBHOOKS.md`,
+    `RATE-LIMITS.md` ו-`ERRORS.md` באותה תיקייה.
+  contact:
+    name: Sync Up
+    url: https://syncup.co.il
+    email: api@syncup.co.il
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.syncup.co.il/v1
+    description: Production
+  - url: https://api.staging.syncup.co.il/v1
+    description: Staging
+  - url: http://localhost:3000/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Health
+    description: בדיקות זמינות
+  - name: Orders
+    description: ניהול הזמנות
+  - name: Events
+    description: ניהול אירועים
+  - name: Customers
+    description: לקוחות
+  - name: Menus
+    description: תפריטים ופריטים
+  - name: Invoices
+    description: חשבוניות וקבלות
+  - name: Deliveries
+    description: משלוחים
+  - name: Webhooks
+    description: ניהול webhooks
+  - name: Innovation
+    description: יכולות חדשות (AI image, QR, plate quality)
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: בדיקת ping
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /orders:
+    get:
+      tags: [Orders]
+      summary: רשימת הזמנות עם pagination
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, confirmed, in_progress, delivered, cancelled]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+    post:
+      tags: [Orders]
+      summary: יצירת הזמנה חדשה
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      responses:
+        '201':
+          description: נוצר
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrderIdParam'
+    get:
+      tags: [Orders]
+      summary: שליפת הזמנה
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Orders]
+      summary: עדכון הזמנה
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderUpdate'
+      responses:
+        '200':
+          description: עודכן
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /events:
+    get:
+      tags: [Events]
+      summary: רשימת אירועים
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /customers:
+    get:
+      tags: [Customers]
+      summary: רשימת לקוחות
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+
+  /menus:
+    get:
+      tags: [Menus]
+      summary: רשימת תפריטים
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Menu'
+
+  /invoices/{invoiceId}:
+    parameters:
+      - name: invoiceId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Invoices]
+      summary: שליפת חשבונית
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+
+  /deliveries/{deliveryId}/track:
+    parameters:
+      - name: deliveryId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Deliveries]
+      summary: מצב משלוח חי
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryStatus'
+
+  /innovation/qr/{subject}/{entityId}:
+    parameters:
+      - name: subject
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [order, invoice, event, customer, delivery, equipment, vehicle, employee]
+      - name: entityId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags: [Innovation]
+      summary: יצירת QR לישות
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QR'
+
+  /innovation/plate-quality:
+    post:
+      tags: [Innovation]
+      summary: ניתוח איכות מנה מתמונה
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [imageUrl]
+              properties:
+                imageUrl:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlateQualityResult'
+
+  /webhooks:
+    get:
+      tags: [Webhooks]
+      summary: רשימת webhooks מוגדרים
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Webhook'
+    post:
+      tags: [Webhooks]
+      summary: הרשמת webhook חדש
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookCreate'
+      responses:
+        '201':
+          description: נרשם
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSizeParam:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    OrderIdParam:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+
+  responses:
+    ValidationError:
+      description: שגיאת ולידציה
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: לא נמצא
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        service: { type: string }
+        timestamp: { type: string, format: date-time }
+
+    PaginationMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: קוד שגיאה מובנה — ראה ERRORS.md
+        message:
+          type: string
+          description: הודעת שגיאה אנושית בעברית
+        details:
+          type: object
+          additionalProperties: true
+
+    Order:
+      type: object
+      required: [id, status, totalIls, createdAt]
+      properties:
+        id: { type: string }
+        eventId: { type: string }
+        customerId: { type: string }
+        status:
+          type: string
+          enum: [draft, confirmed, in_progress, delivered, cancelled]
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+        totalIls: { type: number }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    OrderItem:
+      type: object
+      required: [menuItemId, quantity, unitPriceIls]
+      properties:
+        menuItemId: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitPriceIls: { type: number }
+        notes: { type: string }
+
+    OrderCreate:
+      type: object
+      required: [eventId, customerId, items]
+      properties:
+        eventId: { type: string }
+        customerId: { type: string }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+
+    OrderUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [draft, confirmed, in_progress, delivered, cancelled]
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+
+    Event:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        startsAt: { type: string, format: date-time }
+        guests: { type: integer }
+        venue: { type: string }
+
+    Customer:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        taxId: { type: string }
+
+    Menu:
+      type: object
+      properties:
+        id: { type: string }
+        nameHe: { type: string }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MenuItem' }
+
+    MenuItem:
+      type: object
+      properties:
+        id: { type: string }
+        nameHe: { type: string }
+        priceIls: { type: number }
+        imageUrl: { type: string }
+        allergens:
+          type: array
+          items: { type: string }
+
+    Invoice:
+      type: object
+      properties:
+        id: { type: string }
+        invoiceNumber: { type: string }
+        totalIls: { type: number }
+        vatIls: { type: number }
+        issueDate: { type: string, format: date }
+        pdfUrl: { type: string }
+
+    DeliveryStatus:
+      type: object
+      properties:
+        deliveryId: { type: string }
+        status:
+          type: string
+          enum: [scheduled, on_the_way, arrived, delivered, cancelled]
+        eta: { type: string, format: date-time }
+        currentLocation:
+          type: object
+          properties:
+            lat: { type: number }
+            lng: { type: number }
+
+    QR:
+      type: object
+      properties:
+        subject: { type: string }
+        entityId: { type: string }
+        shortUrl: { type: string }
+        dataUrl: { type: string }
+
+    PlateQualityResult:
+      type: object
+      properties:
+        scores:
+          type: object
+          properties:
+            presentation: { type: integer, minimum: 0, maximum: 10 }
+            portion: { type: integer, minimum: 0, maximum: 10 }
+            plating: { type: integer, minimum: 0, maximum: 10 }
+            freshness: { type: integer, minimum: 0, maximum: 10 }
+        averageScore: { type: number }
+        alert: { type: boolean }
+        notesHe: { type: string }
+
+    Webhook:
+      type: object
+      properties:
+        id: { type: string }
+        url: { type: string, format: uri }
+        events:
+          type: array
+          items: { type: string }
+        secret: { type: string, description: "מוצג רק ביצירה — לאחר מכן מוסתר" }
+        active: { type: boolean }
+
+    WebhookCreate:
+      type: object
+      required: [url, events]
+      properties:
+        url: { type: string, format: uri }
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+              - order.created
+              - order.updated
+              - order.cancelled
+              - invoice.issued
+              - delivery.status_changed
+              - plate.quality_alert
