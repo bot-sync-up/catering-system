@@ -1,0 +1,31 @@
+{
+  "name": "@syncup/voice-ordering",
+  "version": "0.1.0",
+  "description": "מערכת הזמנות קולית בעברית — טלפוניה, ASR, NLU, דיאלוג, TTS, איכות",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "twilio": "^5.3.0",
+    "openai": "^4.70.0",
+    "xstate": "^5.18.0",
+    "microsoft-cognitiveservices-speech-sdk": "^1.41.0",
+    "@google-cloud/text-to-speech": "^5.5.0",
+    "fastify": "^5.0.0",
+    "ws": "^8.18.0",
+    "pino": "^9.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.7.0",
+    "@types/ws": "^8.5.13"
+  }
+}
