@@ -1,19 +1,18 @@
 {
-  "name": "invoice-ocr-monorepo",
+  "name": "catering-monorepo",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "packages/*/*",
-    "apps/*"
-  ],
+  "description": "Monorepo עבור מערכת קייטרינג: event-bus + integration-adapters",
+  "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "build": "npm -ws --if-present run build",
-    "test": "npm -ws --if-present run test",
-    "dev:api": "npm -w apps/api run dev",
-    "dev:web": "npm -w apps/web-verify run dev",
-    "worker": "npm -w @invoice-ocr/integrations-ocr run worker"
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
   },
-  "engines": {
-    "node": ">=20"
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.12.7"
   }
 }
