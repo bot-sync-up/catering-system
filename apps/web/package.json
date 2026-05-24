@@ -6,18 +6,36 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .next .turbo node_modules"
   },
   "dependencies": {
-    "@aneh/auth": "*",
-    "next": "^14.2.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "next": "15.0.3",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "@trpc/server": "^11.0.0-rc.648",
+    "@trpc/client": "^11.0.0-rc.648",
+    "@trpc/react-query": "^11.0.0-rc.648",
+    "@trpc/next": "^11.0.0-rc.648",
+    "@tanstack/react-query": "^5.59.20",
+    "react-hook-form": "^7.53.2",
+    "@hookform/resolvers": "^3.9.1",
+    "zod": "^3.23.8",
+    "tailwindcss": "^3.4.14",
+    "clsx": "^2.1.1",
+    "class-variance-authority": "^0.7.0",
+    "tailwind-merge": "^2.5.4",
+    "lucide-react": "^0.460.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
-    "@types/node": "^20.11.0",
-    "typescript": "^5.4.0"
+    "@types/node": "^22.9.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "typescript": "^5.6.3",
+    "eslint": "^9.15.0",
+    "eslint-config-next": "15.0.3"
   }
 }

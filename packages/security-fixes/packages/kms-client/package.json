@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/kms-client",
+  "version": "1.0.0",
+  "description": "Wrapper ל-AWS KMS / HashiCorp Vault להצפנה מנוהלת",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}

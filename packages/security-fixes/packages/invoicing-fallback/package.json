@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/invoicing-fallback",
+  "version": "1.0.0",
+  "description": "Wrapper להוצאת חשבוניות: iCount → GreenInvoice → Rivhit fallback",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}

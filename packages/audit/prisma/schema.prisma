@@ -1,0 +1,114 @@
+// Audit Log System — Prisma schema
+// Greenfield design for "Aneh et HaShoel" platform.
+// Append-only AuditLogs table; UPDATE/DELETE blocked at the database level.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Core users (minimal — extend as platform grows)
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  RABBI            // עונה לשאלות
+  EDITOR           // עורך תוכן
+  GENERAL_ADMIN    // מנהל כללי — היחיד שיכול לראות את ה-Audit Log
+  USER             // שואל רגיל
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  role         UserRole   @default(USER)
+  tenantId     String?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  questions    Question[] @relation("UserQuestions")
+  answers      Answer[]   @relation("UserAnswers")
+}
+
+// ---------------------------------------------------------------------------
+// Domain — questions & answers (subject to audit, including official tagging)
+// ---------------------------------------------------------------------------
+
+model Question {
+  id        String   @id @default(uuid())
+  title     String
+  body      String
+  authorId  String
+  tenantId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author    User     @relation("UserQuestions", fields: [authorId], references: [id])
+  answers   Answer[]
+}
+
+model Answer {
+  id          String   @id @default(uuid())
+  questionId  String
+  authorId    String
+  body        String
+  // החלק הקריטי שצריך תיוג:
+  // official = תשובה רשמית של רב מוסמך מטעם המרכז למורשת מרן
+  // unofficial = דעה אישית / לא הוסמכה
+  isOfficial  Boolean  @default(false)
+  tenantId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  question    Question @relation(fields: [questionId], references: [id])
+  author      User     @relation("UserAnswers", fields: [authorId], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// Audit Log — APPEND ONLY
+// ---------------------------------------------------------------------------
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  READ_SENSITIVE       // קריאה של נתונים רגישים
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  LOGOUT
+  PASSWORD_CHANGE
+  ROLE_CHANGE
+  OFFICIAL_TAG_CHANGE  // שינוי תיוג official/unofficial
+  EXPORT
+  PERMISSION_DENIED
+}
+
+model AuditLog {
+  // BigInt id — append-only sequence; trigger blocks any UPDATE/DELETE.
+  id          BigInt      @id @default(autoincrement())
+  userId      String?     // שמי שביצע. null = אנונימי (כשל התחברות וכד׳)
+  entityType  String      // למשל "Question", "Answer", "User", "Auth"
+  entityId    String?     // מזהה הישות שהושפעה
+  action      AuditAction
+  oldValues   Json?       // ערכים לפני השינוי
+  newValues   Json?       // ערכים אחרי השינוי
+  ip          String?     // כתובת IP של מבצע הפעולה
+  userAgent   String?     // User-Agent של הדפדפן/הלקוח
+  timestamp   DateTime    @default(now())
+  tenantId    String?     // לטענאנט — סינון רב-לקוחי
+
+  // אינדקסים לחיפוש מהיר במסך הצפייה (עברית RTL)
+  @@index([timestamp])
+  @@index([userId, timestamp])
+  @@index([entityType, entityId, timestamp])
+  @@index([action, timestamp])
+  @@index([tenantId, timestamp])
+  @@map("audit_logs")
+}

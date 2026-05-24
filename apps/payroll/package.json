@@ -1,0 +1,19 @@
+{
+  "name": "payroll-system",
+  "version": "1.0.0",
+  "description": "Israeli Payroll System - מערכת חישוב שכר ישראלית",
+  "main": "src/api/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/api/server.js",
+    "test": "node tests/run-tests.js",
+    "demo": "node src/demo.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "pdfkit": "^0.15.0"
+  },
+  "author": "bot-sync-up",
+  "license": "MIT"
+}

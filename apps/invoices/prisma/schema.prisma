@@ -1,0 +1,301 @@
+// Finance Documents — Prisma schema
+// Hebrew RTL documents: הצ"מ, חשבונית עסקה, חשבונית מס (הקצאה), מס+קבלה, קבלה, זיכוי, PO
+// Lifecycle: Quote → Order → Invoice → Receipt
+// VAT 17%, installments, aging, reminders, postdated checks, RBAC.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =================== Enums ===================
+
+enum DocType {
+  QUOTE          // הצעת מחיר ("הצ"מ")
+  ORDER          // הזמנת לקוח / Sales Order
+  PO             // הזמנת רכש (Purchase Order)
+  PROFORMA       // חשבונית עסקה (Pro-forma)
+  TAX_INVOICE    // חשבונית מס (חיוב והקצאה)
+  TAX_INVOICE_RECEIPT // חשבונית מס + קבלה
+  RECEIPT        // קבלה
+  CREDIT_NOTE    // חשבונית זיכוי
+}
+
+enum DocStatus {
+  DRAFT
+  ISSUED
+  SENT
+  PARTIAL_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+  CREDITED
+}
+
+enum DocTag {
+  OFFICIAL       // רשמי (מדווח לרשות המיסים)
+  UNOFFICIAL     // לא רשמי / טיוטא
+}
+
+enum PaymentMethod {
+  CASH
+  CHECK
+  POSTDATED_CHECK
+  BANK_TRANSFER
+  CREDIT_CARD
+  OTHER
+}
+
+enum CheckStatus {
+  PENDING
+  DEPOSITED
+  CLEARED
+  BOUNCED
+  CANCELLED
+}
+
+enum ReminderChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum ReminderStatus {
+  SCHEDULED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum Role {
+  ADMIN
+  ACCOUNTANT
+  SALES
+  VIEWER
+}
+
+enum CustomerStatus {
+  ACTIVE
+  FROZEN         // הקפאת הזמנות עקב חוב
+}
+
+// =================== Org / Users ===================
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  legalName   String?
+  taxId       String?  // ח.פ / ע.מ
+  address     String?
+  phone       String?
+  email       String?
+  vatRate     Decimal  @default(0.17) @db.Decimal(5, 4)
+  createdAt   DateTime @default(now())
+
+  users       User[]
+  customers   Customer[]
+  documents   Document[]
+  series      DocumentSeries[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  email     String   @unique
+  name      String
+  passHash  String
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+
+  audits    AuditLog[]
+}
+
+// =================== Customers ===================
+
+model Customer {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  name        String
+  taxId       String?
+  email       String?
+  phone       String?
+  whatsapp    String?
+  address     String?
+  status      CustomerStatus @default(ACTIVE)
+  creditLimit Decimal? @db.Decimal(14, 2)
+  createdAt   DateTime @default(now())
+
+  documents   Document[]
+  reminders   Reminder[]
+  checks      PostdatedCheck[]
+
+  @@index([orgId, name])
+}
+
+// =================== Document numbering ===================
+
+model DocumentSeries {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  type      DocType
+  prefix    String   @default("")
+  next      Int      @default(1)
+
+  @@unique([orgId, type])
+}
+
+// =================== Document ===================
+
+model Document {
+  id          String     @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  customerId  String
+  customer    Customer   @relation(fields: [customerId], references: [id])
+
+  type        DocType
+  tag         DocTag     @default(OFFICIAL)
+  status      DocStatus  @default(DRAFT)
+  number      String     // human-readable, unique per (org, type)
+  issueDate   DateTime   @default(now())
+  dueDate     DateTime?
+  currency    String     @default("ILS")
+
+  subtotal    Decimal    @db.Decimal(14, 2)  // pre-VAT
+  vatRate     Decimal    @default(0.17) @db.Decimal(5, 4)
+  vatAmount   Decimal    @db.Decimal(14, 2)
+  total       Decimal    @db.Decimal(14, 2)
+  paidAmount  Decimal    @default(0) @db.Decimal(14, 2)
+  balance     Decimal    @db.Decimal(14, 2)
+
+  notes       String?
+  pdfPath     String?
+
+  // Lifecycle linkage
+  parentId    String?
+  parent      Document?  @relation("DocChild", fields: [parentId], references: [id])
+  children    Document[] @relation("DocChild")
+
+  // Credit-note linkage
+  creditOfId  String?
+  creditOf    Document?  @relation("CreditOf", fields: [creditOfId], references: [id])
+  credits     Document[] @relation("CreditOf")
+
+  items        DocumentItem[]
+  installments Installment[]
+  payments     Payment[]
+  reminders    Reminder[]
+  audits       AuditLog[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([orgId, type, number])
+  @@index([orgId, status, dueDate])
+  @@index([customerId, status])
+}
+
+model DocumentItem {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal  @default(1) @db.Decimal(12, 3)
+  unitPrice   Decimal  @db.Decimal(14, 2)
+  discount    Decimal  @default(0) @db.Decimal(5, 4) // 0..1
+  vatRate     Decimal  @default(0.17) @db.Decimal(5, 4)
+  lineTotal   Decimal  @db.Decimal(14, 2)            // (qty*unit*(1-disc))
+}
+
+// =================== Installments / Advance payments ===================
+
+model Installment {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  seq         Int                                   // 1..N
+  // Either fixed amount OR percent of total
+  percent     Decimal? @db.Decimal(5, 4)
+  amount      Decimal  @db.Decimal(14, 2)            // resolved amount
+  dueDate     DateTime
+  paid        Boolean  @default(false)
+  paidAt      DateTime?
+
+  @@unique([documentId, seq])
+  @@index([dueDate, paid])
+}
+
+// =================== Payments ===================
+
+model Payment {
+  id          String        @id @default(cuid())
+  documentId  String
+  document    Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  amount      Decimal       @db.Decimal(14, 2)
+  method      PaymentMethod
+  paidAt      DateTime      @default(now())
+  reference   String?       // tx id / check ref
+  checkId     String?       @unique
+  check       PostdatedCheck? @relation(fields: [checkId], references: [id])
+  notes       String?
+}
+
+// =================== Postdated checks ===================
+
+model PostdatedCheck {
+  id          String      @id @default(cuid())
+  customerId  String
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  bank        String
+  branch      String?
+  account     String?
+  checkNumber String
+  amount      Decimal     @db.Decimal(14, 2)
+  dueDate     DateTime
+  status      CheckStatus @default(PENDING)
+  documentId  String?
+  payment     Payment?
+  notes       String?
+  createdAt   DateTime    @default(now())
+
+  @@index([dueDate, status])
+}
+
+// =================== Reminders ===================
+
+model Reminder {
+  id          String          @id @default(cuid())
+  documentId  String
+  document    Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer        @relation(fields: [customerId], references: [id])
+  channel     ReminderChannel
+  scheduledAt DateTime
+  sentAt      DateTime?
+  status      ReminderStatus  @default(SCHEDULED)
+  template    String          // e.g. "first", "second", "final"
+  attempt     Int             @default(0)
+  payload     String?         // last error / response
+
+  @@index([scheduledAt, status])
+}
+
+// =================== Audit ===================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id])
+  action     String
+  meta       Json?
+  createdAt  DateTime @default(now())
+}

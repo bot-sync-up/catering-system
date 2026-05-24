@@ -1,0 +1,12 @@
+<h2 style="color:#1e40af;margin:0 0 12px;">איך היה?</h2>
+<p>{{firstName|שלום}}, נשמח לקבל ממך משוב קצר על השירות.</p>
+<p style="font-size:18px;font-weight:700;margin:16px 0;">{{question|באיזו מידה תמליצ/י לחבר על השירות שלנו? (0-10)</p>
+<table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+  <tr>
+    {{#each 0..10}}<td style="padding:4px;">
+      <a href="{{baseUrl}}/survey/{{surveyId}}?lead={{leadId}}&score={{this}}"
+         style="display:inline-block;width:36px;height:36px;line-height:36px;text-align:center;background:#1e40af;color:#fff;border-radius:6px;text-decoration:none;font-weight:700;">{{this}}</a>
+    </td>{{/each}}
+  </tr>
+</table>
+<p style="margin-top:24px;color:#475569;font-size:14px;">תודה רבה!</p>

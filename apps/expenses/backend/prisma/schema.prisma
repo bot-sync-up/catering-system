@@ -1,0 +1,321 @@
+// Prisma schema — Expenses & Budget
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============== Users ==============
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  name          String
+  passwordHash  String
+  role          UserRole        @default(USER)
+  createdAt     DateTime        @default(now())
+  expenses      Expense[]
+  reimbursements Reimbursement[]
+  pettyEntries  PettyCashEntry[]
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
+  ACCOUNTANT
+}
+
+// ============== Chart of Accounts (CoA) — Hebrew Israeli hierarchy ==============
+model CoA {
+  id          String   @id @default(uuid())
+  code        String   @unique               // e.g. "5100", "5110"
+  nameHe      String                          // שם החשבון בעברית
+  nameEn      String?
+  type        CoAType
+  parentId    String?
+  parent      CoA?     @relation("CoAHierarchy", fields: [parentId], references: [id])
+  children    CoA[]    @relation("CoAHierarchy")
+  level       Int      @default(0)
+  isActive    Boolean  @default(true)
+  expenses    Expense[]
+  recurring   RecurringExpense[]
+  budgets     Budget[]
+  reimbursements Reimbursement[]
+  pettyEntries PettyCashEntry[]
+
+  @@index([parentId])
+  @@index([type])
+}
+
+enum CoAType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+// ============== Vendors / Suppliers ==============
+model Vendor {
+  id          String   @id @default(uuid())
+  name        String
+  taxId       String?  // ח.פ./עוסק מורשה
+  email       String?
+  phone       String?
+  address     String?
+  bankAccount String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  expenses    Expense[]
+  recurring   RecurringExpense[]
+
+  @@index([name])
+  @@index([taxId])
+}
+
+// ============== Expenses ==============
+model Expense {
+  id              String          @id @default(uuid())
+  amount          Decimal         @db.Decimal(14, 2)
+  currency        String          @default("ILS")
+  vatAmount       Decimal?        @db.Decimal(14, 2)
+  description     String
+  expenseDate     DateTime
+  invoiceNumber   String?
+  invoiceUrl      String?         // upload path
+  ocrData         Json?           // OCR raw extraction
+  source          ExpenseSource   @default(MANUAL)
+  status          ExpenseStatus   @default(RECORDED)
+
+  // relations
+  coaId           String
+  coa             CoA             @relation(fields: [coaId], references: [id])
+  vendorId        String?
+  vendor          Vendor?         @relation(fields: [vendorId], references: [id])
+  userId          String?
+  user            User?           @relation(fields: [userId], references: [id])
+  recurringId     String?
+  recurring       RecurringExpense? @relation(fields: [recurringId], references: [id])
+
+  // bank reconciliation
+  bankTransactionId String?      @unique
+  bankTransaction BankTransaction? @relation(fields: [bankTransactionId], references: [id])
+  reconciled      Boolean         @default(false)
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([expenseDate])
+  @@index([coaId])
+  @@index([vendorId])
+  @@index([status])
+}
+
+enum ExpenseSource {
+  MANUAL
+  RECURRING
+  OCR
+  BANK_IMPORT
+  PETTY_CASH
+  REIMBURSEMENT
+}
+
+enum ExpenseStatus {
+  DRAFT
+  RECORDED
+  RECONCILED
+  PAID
+  CANCELLED
+}
+
+// ============== Recurring Expenses (קבועות) ==============
+model RecurringExpense {
+  id              String          @id @default(uuid())
+  name            String                          // שם, למשל "שכירות משרד"
+  category        RecurringCategory
+  amount          Decimal         @db.Decimal(14, 2)
+  currency        String          @default("ILS")
+  frequency       RecurringFreq   @default(MONTHLY)
+  dayOfMonth      Int?            @default(1)   // 1-28 for safe monthly
+  startDate       DateTime
+  endDate         DateTime?
+  isActive        Boolean         @default(true)
+  autoCreate      Boolean         @default(true)
+  description     String?
+  coaId           String
+  coa             CoA             @relation(fields: [coaId], references: [id])
+  vendorId        String?
+  vendor          Vendor?         @relation(fields: [vendorId], references: [id])
+  expenses        Expense[]
+  lastGeneratedAt DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([isActive])
+  @@index([category])
+}
+
+enum RecurringCategory {
+  RENT            // שכירות
+  ELECTRICITY     // חשמל
+  WATER           // מים
+  GAS             // גז
+  INTERNET        // אינטרנט
+  CLEANING        // ניקיון
+  INSURANCE       // ביטוחים
+  PHONE           // טלפון
+  ACCOUNTING      // הנהלת חשבונות
+  SALARY          // שכר
+  OTHER
+}
+
+enum RecurringFreq {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  WEEKLY
+}
+
+// ============== Budgets ==============
+model Budget {
+  id          String   @id @default(uuid())
+  year        Int
+  month       Int?     // null = annual; 1-12 = monthly breakdown
+  coaId       String
+  coa         CoA      @relation(fields: [coaId], references: [id])
+  amount      Decimal  @db.Decimal(14, 2)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([year, month, coaId])
+  @@index([year])
+}
+
+model VarianceAlert {
+  id          String   @id @default(uuid())
+  year        Int
+  month       Int
+  coaId       String
+  budgetAmount Decimal  @db.Decimal(14, 2)
+  actualAmount Decimal  @db.Decimal(14, 2)
+  variancePct Float
+  level       AlertLevel
+  message     String
+  acknowledged Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+enum AlertLevel {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// ============== Petty Cash (קופה קטנה) ==============
+model PettyCash {
+  id              String   @id @default(uuid())
+  name            String                // e.g. "קופה ראשית"
+  initialBalance  Decimal  @db.Decimal(14, 2)
+  currentBalance  Decimal  @db.Decimal(14, 2)
+  custodianId     String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  entries         PettyCashEntry[]
+}
+
+model PettyCashEntry {
+  id          String   @id @default(uuid())
+  pettyId     String
+  petty       PettyCash @relation(fields: [pettyId], references: [id])
+  type        PettyType                 // OUT (הוצאה) / IN (חידוש מזומן)
+  amount      Decimal  @db.Decimal(14, 2)
+  description String
+  date        DateTime
+  receiptUrl  String?
+  ocrData     Json?
+  coaId       String?
+  coa         CoA?     @relation(fields: [coaId], references: [id])
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+enum PettyType {
+  OUT      // הוצאה ממזומן
+  IN       // חידוש מזומן
+}
+
+// ============== Bank ==============
+model BankAccount {
+  id            String   @id @default(uuid())
+  bankName      String
+  branchCode    String?
+  accountNumber String
+  currency      String   @default("ILS")
+  isActive      Boolean  @default(true)
+  statements    BankStatement[]
+}
+
+model BankStatement {
+  id            String   @id @default(uuid())
+  bankAccountId String
+  bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id])
+  filename      String
+  fileType      String         // OFX | CSV | XLSX
+  startDate     DateTime
+  endDate       DateTime
+  uploadedAt    DateTime @default(now())
+  transactions  BankTransaction[]
+}
+
+model BankTransaction {
+  id            String   @id @default(uuid())
+  statementId   String
+  statement     BankStatement @relation(fields: [statementId], references: [id])
+  txDate        DateTime
+  amount        Decimal  @db.Decimal(14, 2)    // negative = withdrawal
+  description   String
+  reference     String?
+  balance       Decimal? @db.Decimal(14, 2)
+  matched       Boolean  @default(false)
+  matchScore    Float?                          // fuzzy confidence
+  expense       Expense?
+  createdAt     DateTime @default(now())
+
+  @@index([txDate])
+  @@index([matched])
+}
+
+// ============== Reimbursements (החזרי הוצאות) ==============
+model Reimbursement {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  amount        Decimal  @db.Decimal(14, 2)
+  description   String
+  expenseDate   DateTime
+  receiptUrl    String?
+  ocrData       Json?
+  coaId         String
+  coa           CoA      @relation(fields: [coaId], references: [id])
+  status        ReimbursementStatus @default(PENDING)
+  approverId    String?
+  approvedAt    DateTime?
+  paidAt        DateTime?
+  rejectionNote String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum ReimbursementStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
