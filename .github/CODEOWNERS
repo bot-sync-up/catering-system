@@ -1,10 +1,20 @@
-# Catering System — CODEOWNERS
-# כל שינוי דורש אישור של @bot-sync-up
-*       @bot-sync-up
+# Default owners
+* @bot-sync-up
 
-# מודולים קריטיים — דורשים תשומת לב מיוחדת
-/packages/billing/      @bot-sync-up
-/packages/ai-suite/     @bot-sync-up
-/packages/voice-ordering/ @bot-sync-up
-/infra/                 @bot-sync-up
-/.github/               @bot-sync-up
+# Code areas
+/packages/contracts/ @bot-sync-up
+/packages/security-fixes/ @bot-sync-up
+/packages/adapter-wiring/ @bot-sync-up
+/packages/ui/ @bot-sync-up
+/packages/ui-polish/ @bot-sync-up
+/services/ @bot-sync-up
+/apps/ @bot-sync-up
+/production-pack/ @bot-sync-up
+/release-bundle/ @bot-sync-up
+
+# Docs
+/docs/ @bot-sync-up
+*.md @bot-sync-up
+
+# CI/CD
+/.github/ @bot-sync-up
