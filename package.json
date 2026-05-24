@@ -1,19 +1,20 @@
 {
-  "name": "weside-monorepo",
+  "name": "hr-shifts-platform",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.1.0",
+  "description": "פלטפורמת HR – תיק עובד ומשמרות (RTL עברית)",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "server",
+    "client"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=apps/public-site",
-    "build": "npm run build --workspace=apps/public-site",
-    "start": "npm run start --workspace=apps/public-site",
-    "lint": "npm run lint --workspace=apps/public-site",
-    "contracts:build": "npm run build --workspace=packages/contracts"
+    "dev": "concurrently -n server,client -c green,cyan \"npm --workspace server run dev\" \"npm --workspace client run dev\"",
+    "build": "npm --workspace server run build && npm --workspace client run build",
+    "start": "npm --workspace server run start",
+    "db:migrate": "npm --workspace server run db:migrate",
+    "db:seed": "npm --workspace server run db:seed"
   },
-  "engines": {
-    "node": ">=20"
+  "devDependencies": {
+    "concurrently": "^9.0.0"
   }
 }

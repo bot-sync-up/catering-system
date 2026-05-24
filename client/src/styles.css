@@ -1,0 +1,170 @@
+/* RTL עברית – עיצוב מערכת */
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --success: #16a34a;
+  --warning: #ea580c;
+  --danger: #dc2626;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: "Heebo", system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+  direction: rtl;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+a { color: var(--primary); text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+
+.app {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+.sidebar {
+  background: #0f172a;
+  color: #fff;
+  padding: 20px 14px;
+}
+.sidebar h1 { font-size: 18px; margin: 0 0 24px; }
+.sidebar a {
+  display: block;
+  color: #cbd5e1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+.sidebar a:hover, .sidebar a.active {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+.main { padding: 24px; overflow-x: hidden; }
+.page-title { font-size: 22px; margin: 0 0 20px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.btn {
+  background: var(--primary);
+  color: #fff;
+  border: 0;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+}
+.btn:hover { background: var(--primary-dark); }
+.btn.secondary { background: #e5e7eb; color: var(--text); }
+.btn.danger { background: var(--danger); }
+.btn.success { background: var(--success); }
+
+.input, .select, textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  background: #fff;
+}
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--muted);
+}
+.row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; margin-bottom: 12px; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tab {
+  padding: 10px 16px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px; text-align: right; border-bottom: 1px solid var(--border); }
+th { background: #f9fafb; font-weight: 600; font-size: 13px; color: var(--muted); }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.badge.success { background: #dcfce7; color: #166534; }
+.badge.warning { background: #ffedd5; color: #9a3412; }
+.badge.danger  { background: #fee2e2; color: #991b1b; }
+.badge.info    { background: #dbeafe; color: #1e40af; }
+
+/* === Schedule grid === */
+.schedule-grid {
+  display: grid;
+  grid-template-columns: 160px repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.schedule-grid .cell {
+  background: #fff;
+  padding: 8px;
+  min-height: 80px;
+}
+.schedule-grid .head {
+  background: #f3f4f6;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+}
+.shift-card {
+  background: #dbeafe;
+  border-right: 3px solid var(--primary);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  cursor: grab;
+  user-select: none;
+}
+.shift-card.unassigned { background: #fef3c7; border-right-color: var(--warning); }
+.shift-card.dragging { opacity: 0.4; }
+
+.dropzone-active { background: #ecfeff !important; outline: 2px dashed var(--primary); }
+
+/* signature canvas */
+.sig-pad {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+/* mobile */
+@media (max-width: 768px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: sticky; top: 0; z-index: 10; }
+  .row { grid-template-columns: 1fr; }
+  .schedule-grid { grid-template-columns: 100px repeat(7, minmax(120px, 1fr)); overflow-x: auto; }
+}
