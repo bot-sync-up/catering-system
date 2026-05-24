@@ -1,0 +1,4 @@
+app_identifier("co.il.syncup.catering")
+apple_id(ENV["APPLE_ID"] || "release@syncup.co.il")
+team_id(ENV["TEAM_ID"] || "SYNCUP1234")
+itc_team_id(ENV["ITC_TEAM_ID"] || "")

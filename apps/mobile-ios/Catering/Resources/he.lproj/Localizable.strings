@@ -1,0 +1,69 @@
+/* Catering iOS — Hebrew localization */
+
+"app.name" = "Catering";
+"app.welcome" = "ברוכים הבאים ל-Catering";
+
+/* Auth */
+"auth.login" = "התחברות";
+"auth.email" = "דוא\"ל";
+"auth.password" = "סיסמה";
+"auth.submit" = "כניסה";
+"auth.biometric" = "כניסה עם Face ID";
+"auth.error.invalid" = "פרטי התחברות שגויים";
+
+/* Roles */
+"role.manager" = "מנהל";
+"role.agent" = "סוכן מכירות";
+"role.kitchen" = "מטבח";
+"role.shift" = "עובד משמרות";
+"role.driver" = "נהג חלוקה";
+"role.customer" = "לקוח";
+
+/* Manager */
+"manager.dashboard" = "לוח בקרה";
+"manager.orders_today" = "הזמנות להיום";
+"manager.revenue_week" = "הכנסות השבוע";
+"manager.staff_on_shift" = "צוות במשמרת";
+
+/* Kitchen */
+"kitchen.prep_tasks" = "משימות הכנה";
+"kitchen.mark_done" = "סמן הושלם";
+"kitchen.ingredients" = "מצרכים";
+
+/* Shift */
+"shift.clock_in" = "כניסה למשמרת";
+"shift.clock_out" = "יציאה ממשמרת";
+"shift.my_shifts" = "המשמרות שלי";
+"shift.request_swap" = "בקשת החלפה";
+
+/* Driver */
+"driver.deliveries" = "משלוחים";
+"driver.navigate" = "נווט";
+"driver.signature" = "חתימת לקוח";
+"driver.proof" = "צילום הוכחת מסירה";
+
+/* Customer */
+"customer.my_orders" = "ההזמנות שלי";
+"customer.new_order" = "הזמנה חדשה";
+
+/* Shared */
+"shared.scan_invoice" = "סריקת חשבונית";
+"shared.scan_barcode" = "סריקת ברקוד";
+"shared.settings" = "הגדרות";
+"shared.logout" = "יציאה";
+"shared.save" = "שמירה";
+"shared.cancel" = "ביטול";
+"shared.confirm" = "אישור";
+"shared.loading" = "טוען...";
+"shared.error.network" = "אין חיבור לאינטרנט";
+"shared.error.generic" = "אירעה שגיאה, נסה שוב";
+
+/* Notifications */
+"notif.new_order.title" = "הזמנה חדשה";
+"notif.task.title" = "משימה חדשה";
+"notif.delivery.title" = "עדכון משלוח";
+"notif.shift.title" = "תזכורת משמרת";
+"notif.payroll.title" = "תלוש שכר";
+
+/* Quiet Hours */
+"quiet_hours.info" = "שעות שקט: 22:00 - 08:00";

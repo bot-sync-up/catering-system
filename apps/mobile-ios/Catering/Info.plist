@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>he</string>
+    <key>CFBundleDisplayName</key>
+    <string>Catering</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>he</string>
+        <string>en</string>
+    </array>
+    <key>CFBundleAllowMixedLocalizations</key>
+    <true/>
+    <key>UIRequiresFullScreen</key>
+    <false/>
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <false/>
+    </dict>
+    <key>UIUserInterfaceStyle</key>
+    <string>Automatic</string>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <true/>
+    <key>UISemanticContentAttribute</key>
+    <string>ForceRightToLeft</string>
+    <key>UIAppFonts</key>
+    <array>
+        <string>Heebo-Regular.ttf</string>
+        <string>Heebo-Bold.ttf</string>
+        <string>Heebo-Medium.ttf</string>
+    </array>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+        <string>processing</string>
+        <string>remote-notification</string>
+        <string>location</string>
+    </array>
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>co.il.syncup.catering.offline-sync</string>
+    </array>
+    <key>NSCameraUsageDescription</key>
+    <string>נדרשת גישה למצלמה כדי לסרוק חשבוניות, לסרוק ברקודים ולצלם הוכחות מסירה.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>נדרשת גישה לתמונות כדי לצרף הוכחות מסירה ותמונות מנות.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>נדרשת הרשאה לשמירת חתימות והוכחות מסירה לאלבום.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>נדרשת גישה למיקום בעת הניווט למסירת הזמנות.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>נדרשת גישה למיקום ברקע לזיהוי הגעה ליעד וניטור משלוחים.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>נדרשת גישה למיקום ברקע לזיהוי הגעה ליעד וניטור משלוחים.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>נדרשת הרשאת Face ID לכניסה מהירה ובטוחה לאפליקציה.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>נדרשת גישה למיקרופון להקלטת הערות קוליות בהזמנות.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>נדרשת גישה לאנשי קשר לשיתוף לקוחות וצוות.</string>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>נדרשת גישה ל-Bluetooth להדפסה ניידת של חשבוניות.</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+    </dict>
+    <key>FirebaseAppDelegateProxyEnabled</key>
+    <false/>
+    <key>FirebaseMessagingAutoInitEnabled</key>
+    <true/>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+</dict>
+</plist>
