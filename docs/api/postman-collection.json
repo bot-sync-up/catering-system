@@ -1,0 +1,107 @@
+{
+  "info": {
+    "_postman_id": "9c5ad6f0-syncup-catering-2026",
+    "name": "Sync Up Catering API",
+    "description": "אוסף בקשות לפלטפורמת קייטרינג Sync Up. השתמשו ב-Environment Variables: {{base_url}} ו-{{token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://api.syncup.co.il/v1" },
+    { "key": "token", "value": "REPLACE_WITH_JWT" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+      }
+    },
+    {
+      "name": "Orders - List",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/orders?page=1&pageSize=50",
+          "host": ["{{base_url}}"],
+          "path": ["orders"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "pageSize", "value": "50" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Orders - Create",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"eventId\": \"evt_123\",\n  \"customerId\": \"cust_456\",\n  \"items\": [\n    { \"menuItemId\": \"mi_001\", \"quantity\": 50, \"unitPriceIls\": 75 }\n  ]\n}"
+        },
+        "url": { "raw": "{{base_url}}/orders", "host": ["{{base_url}}"], "path": ["orders"] }
+      }
+    },
+    {
+      "name": "Orders - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/orders/ord_001", "host": ["{{base_url}}"], "path": ["orders", "ord_001"] }
+      }
+    },
+    {
+      "name": "Orders - Update Status",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"confirmed\"\n}" },
+        "url": { "raw": "{{base_url}}/orders/ord_001", "host": ["{{base_url}}"], "path": ["orders", "ord_001"] }
+      }
+    },
+    {
+      "name": "Innovation - QR for Order",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base_url}}/innovation/qr/order/ord_001",
+          "host": ["{{base_url}}"],
+          "path": ["innovation", "qr", "order", "ord_001"]
+        }
+      }
+    },
+    {
+      "name": "Innovation - Plate Quality",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"imageUrl\": \"https://cdn.syncup.co.il/plates/2026/05/24/abc.jpg\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/innovation/plate-quality",
+          "host": ["{{base_url}}"],
+          "path": ["innovation", "plate-quality"]
+        }
+      }
+    },
+    {
+      "name": "Webhooks - Register",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com/syncup-webhook\",\n  \"events\": [\"order.created\", \"invoice.issued\"]\n}"
+        },
+        "url": { "raw": "{{base_url}}/webhooks", "host": ["{{base_url}}"], "path": ["webhooks"] }
+      }
+    }
+  ]
+}

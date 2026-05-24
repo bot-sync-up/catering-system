@@ -1,0 +1,23 @@
+{
+  "name": "@syncup/storybook",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "chromatic": "chromatic --config-file=chromatic.config.json"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "^8.0.0",
+    "@storybook/addon-essentials": "^8.0.0",
+    "@storybook/addon-interactions": "^8.0.0",
+    "@storybook/addon-rtl-direction": "^0.4.1",
+    "@chromatic-com/storybook": "^1.6.0",
+    "@storybook/react": "^8.0.0",
+    "@storybook/react-vite": "^8.0.0",
+    "chromatic": "^11.0.0",
+    "storybook": "^8.0.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  }
+}

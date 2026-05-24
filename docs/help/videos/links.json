@@ -1,0 +1,35 @@
+{
+  "_comment": "מיפוי slug של וידאו ל-URL ב-CDN. ה-Renderer מחליף תגיות <!-- video:slug --> ב-iframe.",
+  "videos": {
+    "getting-started-overview": {
+      "title": "סקירה כללית — 3 דקות",
+      "url": "https://video.bunnycdn.com/play/12345/getting-started-overview.mp4",
+      "poster": "https://cdn.syncup.co.il/help/posters/getting-started-overview.jpg",
+      "durationSeconds": 180
+    },
+    "ar-demo": {
+      "title": "דמו תפריט AR",
+      "url": "https://video.bunnycdn.com/play/12345/ar-demo.mp4",
+      "poster": "https://cdn.syncup.co.il/help/posters/ar-demo.jpg",
+      "durationSeconds": 95
+    },
+    "kitchen-voice-demo": {
+      "title": "פקודות קוליות במטבח",
+      "url": "https://video.bunnycdn.com/play/12345/kitchen-voice-demo.mp4",
+      "poster": "https://cdn.syncup.co.il/help/posters/kitchen-voice.jpg",
+      "durationSeconds": 120
+    },
+    "passkey-setup": {
+      "title": "הגדרת Passkey ב-30 שניות",
+      "url": "https://video.bunnycdn.com/play/12345/passkey-setup.mp4",
+      "poster": "https://cdn.syncup.co.il/help/posters/passkey.jpg",
+      "durationSeconds": 35
+    },
+    "icount-integration": {
+      "title": "חיבור iCount — מדריך מלא",
+      "url": "https://video.bunnycdn.com/play/12345/icount-integration.mp4",
+      "poster": "https://cdn.syncup.co.il/help/posters/icount.jpg",
+      "durationSeconds": 240
+    }
+  }
+}

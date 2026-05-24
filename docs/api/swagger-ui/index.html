@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sync Up Catering API — Swagger UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+    .topbar { background: #0d6efd; color: white; padding: 12px 24px; }
+    .topbar h1 { margin: 0; font-size: 18px; }
+    .topbar a { color: #fff; margin-inline-start: 16px; text-decoration: none; opacity: 0.85; }
+    .topbar a:hover { opacity: 1; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>
+      Sync Up Catering API
+      <a href="../redoc/index.html">תצוגת Redoc</a>
+      <a href="../EXAMPLES.md">דוגמאות</a>
+      <a href="../AUTHENTICATION.md">אימות</a>
+      <a href="../WEBHOOKS.md">Webhooks</a>
+    </h1>
+  </div>
+  <div id="swagger"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = () => {
+      window.ui = SwaggerUIBundle({
+        url: "../openapi.yaml",
+        dom_id: "#swagger",
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+        layout: "StandaloneLayout",
+        defaultModelsExpandDepth: 1,
+      });
+    };
+  </script>
+</body>
+</html>

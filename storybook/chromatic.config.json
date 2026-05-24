@@ -1,0 +1,8 @@
+{
+  "projectId": "syncup-catering-storybook",
+  "buildScriptName": "build-storybook",
+  "onlyChanged": true,
+  "exitZeroOnChanges": true,
+  "autoAcceptChanges": "main",
+  "skip": "dependabot/**"
+}
