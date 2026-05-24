@@ -1,0 +1,119 @@
+/* RTL עברית — סגנון בסיסי נקי */
+:root {
+  --bg: #f5f6fa;
+  --card: #fff;
+  --border: #e1e4ec;
+  --primary: #2563eb;
+  --primary-2: #1d4ed8;
+  --danger: #dc2626;
+  --warn: #d97706;
+  --ok: #16a34a;
+  --text: #1f2937;
+  --muted: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Arial", "Heebo", sans-serif;
+  direction: rtl;
+  background: var(--bg);
+  color: var(--text);
+}
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.topbar {
+  background: #1e293b;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 24px;
+  height: 56px;
+}
+.topbar .brand { font-weight: 700; font-size: 18px; }
+.topbar nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.topbar nav a {
+  color: #cbd5e1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.topbar nav a:hover { background: #334155; color: #fff; text-decoration: none; }
+.topbar nav a.active { background: var(--primary); color: #fff; }
+
+main { padding: 20px; max-width: 1400px; margin: 0 auto; }
+h1 { margin: 0 0 16px; font-size: 22px; }
+h2 { font-size: 18px; margin: 24px 0 12px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.kpi {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px; text-align: center;
+}
+.kpi .v { font-size: 26px; font-weight: 700; color: var(--primary); }
+.kpi .l { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.kpi.danger .v { color: var(--danger); }
+.kpi.warn .v { color: var(--warn); }
+
+table {
+  width: 100%; border-collapse: collapse; background: #fff;
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+}
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); font-size: 14px; }
+th { background: #f1f5f9; font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8fafc; }
+
+button, .btn {
+  background: var(--primary); color: #fff; border: 0; padding: 8px 14px;
+  border-radius: 6px; cursor: pointer; font-size: 14px; font-family: inherit;
+}
+button:hover, .btn:hover { background: var(--primary-2); }
+button.secondary { background: #475569; }
+button.danger { background: var(--danger); }
+button.ok { background: var(--ok); }
+button.small { padding: 4px 10px; font-size: 12px; }
+
+input, select, textarea {
+  font-family: inherit; font-size: 14px;
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; width: 100%;
+  background: #fff;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); border-color: var(--primary); }
+label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; margin-top: 8px; }
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row > * { flex: 1; min-width: 120px; }
+
+.badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+.badge.warn { background: #fef3c7; color: #92400e; }
+.badge.danger { background: #fee2e2; color: #991b1b; }
+.badge.ok { background: #dcfce7; color: #166534; }
+.badge.info { background: #dbeafe; color: #1e40af; }
+.badge.kind-raw { background: #e0e7ff; color: #3730a3; }
+.badge.kind-dish { background: #fce7f3; color: #9d174d; }
+
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal {
+  background: #fff; padding: 20px; border-radius: 10px;
+  width: min(560px, 92vw); max-height: 90vh; overflow: auto;
+}
+.modal h2 { margin-top: 0; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-start; margin-top: 16px; }
+
+.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.toolbar input { max-width: 240px; }
+.muted { color: var(--muted); font-size: 13px; }
+.right { margin-right: auto; }

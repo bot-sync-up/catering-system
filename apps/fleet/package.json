@@ -1,0 +1,18 @@
+{
+  "name": "fleet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fleet management — api + web + mobile + shared",
+  "scripts": {
+    "dev": "echo 'Run separately per workspace'",
+    "dev:api": "pnpm --filter api run dev",
+    "dev:web": "pnpm --filter web run dev",
+    "dev:mobile": "pnpm --filter mobile run start"
+  },
+  "_workspacesRemoved": [
+    "api",
+    "web",
+    "mobile",
+    "shared"
+  ]
+}

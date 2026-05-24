@@ -1,0 +1,273 @@
+// Greenfield BI/Reports schema
+// PostgreSQL + Prisma 5
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== Users / Auth (minimal — assumes integration with parent system) =====
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      Role     @default(VIEWER)
+  isOfficial Boolean @default(false) // for official-only filter
+  createdAt DateTime @default(now())
+
+  agentInvoices Invoice[]  @relation("AgentInvoices")
+  reports       Report[]
+  customers     Customer[] @relation("AgentCustomers")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  AGENT
+  ACCOUNTANT
+  VIEWER
+}
+
+// ===== Customers & Categories =====
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  taxId     String?
+  agentId   String?
+  agent     User?    @relation("AgentCustomers", fields: [agentId], references: [id])
+  category  String?
+  createdAt DateTime @default(now())
+
+  invoices  Invoice[]
+  events    Event[]
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+}
+
+// ===== Invoices / Payments / Expenses =====
+model Invoice {
+  id          String        @id @default(cuid())
+  number      String        @unique
+  customerId  String
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  agentId     String?
+  agent       User?         @relation("AgentInvoices", fields: [agentId], references: [id])
+  category    String?
+  issuedAt    DateTime
+  dueAt       DateTime?
+  subtotal    Decimal       @db.Decimal(14, 2)
+  vat         Decimal       @db.Decimal(14, 2)
+  total       Decimal       @db.Decimal(14, 2)
+  status      InvoiceStatus @default(OPEN)
+  isOfficial  Boolean       @default(true)
+  eventId     String?
+  event       Event?        @relation(fields: [eventId], references: [id])
+  createdAt   DateTime      @default(now())
+
+  payments    Payment[]
+
+  @@index([issuedAt])
+  @@index([agentId])
+  @@index([category])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  OVERDUE
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  amount    Decimal  @db.Decimal(14, 2)
+  paidAt    DateTime
+  method    String?
+  isOfficial Boolean @default(true)
+
+  @@index([paidAt])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  category    String
+  amount      Decimal  @db.Decimal(14, 2)
+  vat         Decimal  @db.Decimal(14, 2) @default(0)
+  spentAt     DateTime
+  vendor      String?
+  isOfficial  Boolean  @default(true)
+  eventId     String?
+  event       Event?   @relation(fields: [eventId], references: [id])
+
+  @@index([spentAt])
+  @@index([category])
+}
+
+// ===== Inventory / Stock revaluation =====
+model InventoryItem {
+  id       String  @id @default(cuid())
+  sku      String  @unique
+  name     String
+  unit     String  @default("unit")
+  cost     Decimal @db.Decimal(14, 4)
+  qty      Decimal @db.Decimal(14, 4) @default(0)
+  category String?
+
+  movements StockMovement[]
+}
+
+model StockMovement {
+  id        String       @id @default(cuid())
+  itemId    String
+  item      InventoryItem @relation(fields: [itemId], references: [id])
+  qty       Decimal      @db.Decimal(14, 4)
+  unitCost  Decimal      @db.Decimal(14, 4)
+  type      MovementType
+  occurredAt DateTime    @default(now())
+  eventId   String?
+  event     Event?       @relation(fields: [eventId], references: [id])
+
+  @@index([occurredAt])
+}
+
+enum MovementType {
+  PURCHASE
+  CONSUME
+  ADJUST
+  RETURN
+  REVALUE
+}
+
+// ===== Events (for COGS per event + profitability) =====
+model Event {
+  id        String   @id @default(cuid())
+  name      String
+  customerId String?
+  customer  Customer? @relation(fields: [customerId], references: [id])
+  startsAt  DateTime
+  endsAt    DateTime?
+  revenue   Decimal  @db.Decimal(14, 2) @default(0)
+
+  invoices  Invoice[]
+  expenses  Expense[]
+  stockMovements StockMovement[]
+  laborEntries  LaborEntry[]
+  overheadAlloc OverheadAllocation[]
+
+  @@index([startsAt])
+}
+
+model LaborEntry {
+  id       String   @id @default(cuid())
+  eventId  String
+  event    Event    @relation(fields: [eventId], references: [id])
+  hours    Decimal  @db.Decimal(8, 2)
+  rate     Decimal  @db.Decimal(10, 2)
+  role     String?
+  occurredAt DateTime @default(now())
+}
+
+model OverheadAllocation {
+  id       String  @id @default(cuid())
+  eventId  String
+  event    Event   @relation(fields: [eventId], references: [id])
+  amount   Decimal @db.Decimal(14, 2)
+  reason   String?
+}
+
+// ===== Form 106 (annual employee tax summary) =====
+model Employee {
+  id        String   @id @default(cuid())
+  taxId     String   @unique
+  name      String
+  startedAt DateTime
+  endedAt   DateTime?
+
+  payslips  Payslip[]
+}
+
+model Payslip {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  periodMonth Int      // 1..12
+  periodYear  Int
+  gross       Decimal  @db.Decimal(14, 2)
+  taxWithheld Decimal  @db.Decimal(14, 2)
+  socialSecurity Decimal @db.Decimal(14, 2)
+  healthInsurance Decimal @db.Decimal(14, 2)
+  pension     Decimal  @db.Decimal(14, 2) @default(0)
+  paidAt      DateTime
+
+  @@unique([employeeId, periodYear, periodMonth])
+  @@index([periodYear])
+}
+
+// ===== Reports / Schedules / Feature Flags =====
+model Report {
+  id        String   @id @default(cuid())
+  type      ReportType
+  params    Json
+  generatedById String?
+  generatedBy   User? @relation(fields: [generatedById], references: [id])
+  fileUrl   String?
+  format    ReportFormat
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum ReportType {
+  PNL
+  CASHFLOW
+  VAT
+  FORM_106
+  INVENTORY_REVAL
+  COGS_EVENT
+  BY_AGENT
+  BY_CUSTOMER
+  BY_CATEGORY
+  RETENTION
+  COHORT
+  FORECAST
+}
+
+enum ReportFormat {
+  XLSX
+  PDF
+  JSON
+}
+
+model ScheduledReport {
+  id        String   @id @default(cuid())
+  type      ReportType
+  cron      String
+  params    Json
+  recipients String[]
+  format    ReportFormat @default(XLSX)
+  enabled   Boolean  @default(true)
+  lastRunAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+model FeatureFlag {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  enabled         Boolean  @default(false)
+  rolloutPercent  Int      @default(0) // 0..100
+  targetRoles     Role[]   @default([])
+  description     String?
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@catering/event-bus",
+  "version": "0.1.0",
+  "description": "Event Bus type-safe מבוסס BullMQ + Redis Streams לפלטפורמת קייטרינג",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./saga": {
+      "types": "./dist/saga/index.d.ts",
+      "import": "./dist/saga/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.2",
+    "pino": "^9.1.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/uuid": "^9.0.8",
+    "typescript": "5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

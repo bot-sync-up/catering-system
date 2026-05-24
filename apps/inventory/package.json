@@ -1,0 +1,28 @@
+{
+  "name": "inventory",
+  "version": "1.0.0",
+  "description": "מערכת ניהול מלאי דו-רמתית למטבחים — חומר גלם + מנות, מטבח + מחסן, FIFO, תפוגה, התראות, רכש אוטומטי, ספירת מלאי, שערוך, פחת",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/lib/db/seed.js",
+    "test": "node tests/run.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "sql.js": "^1.10.3",
+    "ejs": "^3.1.10",
+    "bwip-js": "^4.5.1",
+    "pdfkit": "^0.15.0",
+    "uuid": "^10.0.0",
+    "dayjs": "^1.11.13"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/tax-reports",
+  "version": "1.0.0",
+  "description": "טופסי דיווח לרשות המסים בישראל (106, 102, 126) במבנה Mai101 XML",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  }
+}

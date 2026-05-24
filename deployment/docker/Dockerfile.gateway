@@ -1,0 +1,45 @@
+# Multi-stage Dockerfile for API Gateway (Fastify/Express)
+ARG NODE_VERSION=20-alpine
+
+FROM node:${NODE_VERSION} AS deps
+WORKDIR /app
+RUN apk add --no-cache libc6-compat
+COPY package.json package-lock.json* ./
+COPY apps/gateway/package.json ./apps/gateway/
+RUN npm ci --include=dev
+
+FROM node:${NODE_VERSION} AS dev
+WORKDIR /app
+ENV NODE_ENV=development
+COPY --from=deps /app/node_modules ./node_modules
+COPY apps/gateway ./apps/gateway
+WORKDIR /app/apps/gateway
+EXPOSE 4000 9229
+CMD ["npm", "run", "dev"]
+
+FROM node:${NODE_VERSION} AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+WORKDIR /app/apps/gateway
+RUN npm run build && npm prune --omit=dev
+
+FROM node:${NODE_VERSION} AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=4000
+
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 gateway
+
+COPY --from=build --chown=gateway:nodejs /app/apps/gateway/dist ./dist
+COPY --from=build --chown=gateway:nodejs /app/apps/gateway/node_modules ./node_modules
+COPY --from=build --chown=gateway:nodejs /app/apps/gateway/package.json ./
+
+USER gateway
+EXPOSE 4000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:4000/healthz || exit 1
+
+CMD ["node", "dist/server.js"]

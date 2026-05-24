@@ -1,0 +1,58 @@
+{
+  "name": "@aneh-hashoel/icount",
+  "version": "0.1.0",
+  "description": "iCount integration package: REST client, allocation numbers, VAT reports, webhooks, BullMQ queue, multi-provider adapters (iCount/GreenInvoice/Rivhit). Compliant with Israeli Tax Authority (Software approval 1346).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint \"src/**/*.ts\"",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "icount",
+    "invoice",
+    "israeli-tax-authority",
+    "allocation-number",
+    "vat",
+    "green-invoice",
+    "rivhit",
+    "1346"
+  ],
+  "author": "bot-sync-up",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.7",
+    "axios-retry": "^4.5.0",
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.2",
+    "zod": "3.23.8",
+    "pino": "^9.5.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.13",
+    "@types/node": "^22.10.0",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.8.1",
+    "@typescript-eslint/parser": "^8.8.1",
+    "eslint": "^9.12.0",
+    "jest": "^29.7.0",
+    "nock": "^13.5.5",
+    "rimraf": "^6.0.1",
+    "ts-jest": "^29.2.5",
+    "typescript": "5.6.3"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "docs"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

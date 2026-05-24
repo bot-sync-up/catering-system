@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/consent-ledger",
+  "version": "1.0.0",
+  "description": "דבל-אופט-אין + לוג בלתי-ניתן-לשינוי של הסכמות לפי חוק התקשורת",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  }
+}

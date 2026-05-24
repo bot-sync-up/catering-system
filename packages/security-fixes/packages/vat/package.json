@@ -1,0 +1,14 @@
+{
+  "name": "@security-fixes/vat",
+  "version": "1.0.0",
+  "description": "ניהול שיעור מע\"מ ישראלי (18% החל מ-2025)",
+  "main": "dist/vatRate.js",
+  "types": "dist/vatRate.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  }
+}

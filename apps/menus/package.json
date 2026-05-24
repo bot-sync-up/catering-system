@@ -1,0 +1,19 @@
+{
+  "name": "menu-pricing-platform",
+  "version": "1.0.0",
+  "description": "מערכת תפריטים ומחירונים דינמית עם חבילות, אלרגיות, קופונים ונאמנות",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter server\" run dev \"pnpm --filter client\" run dev",
+    "build": "pnpm --filter server run build && pnpm --filter client run build",
+    "test": "pnpm --filter server run test",
+    "start": "pnpm --filter server start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "_workspacesRemoved": [
+    "server",
+    "client"
+  ]
+}

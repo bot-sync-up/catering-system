@@ -1,0 +1,76 @@
+{
+  "title": "Errors & Latency",
+  "uid": "errors-latency",
+  "schemaVersion": 39,
+  "timezone": "Asia/Jerusalem",
+  "refresh": "30s",
+  "tags": ["errors", "latency", "sla"],
+  "time": { "from": "now-3h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP 5xx rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by(service) (rate(http_requests_total{status=~\"5..\"}[1m]))",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP 4xx rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by(service) (rate(http_requests_total{status=~\"4..\"}[1m]))",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Request latency (p50/p95/p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by(le) (rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by(le) (rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum by(le) (rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 4,
+      "title": "Slowest routes (p95)",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "topk(10, histogram_quantile(0.95, sum by(le, route) (rate(http_request_duration_seconds_bucket[15m]))))"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Unhandled exceptions",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "sum by(service) (rate(unhandled_exceptions_total[5m]))", "legendFormat": "{{service}}" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Queue failures (BullMQ)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        { "expr": "sum by(queue) (rate(bullmq_jobs_failed_total[5m]))", "legendFormat": "{{queue}}" }
+      ]
+    }
+  ]
+}

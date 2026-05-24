@@ -1,0 +1,15 @@
+{
+  "name": "expenses",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Expenses & Budget Management — backend + frontend",
+  "scripts": {
+    "dev": "echo 'Run separately: pnpm --filter backend run dev / pnpm --filter frontend run dev'",
+    "dev:backend": "pnpm --filter backend run dev",
+    "dev:frontend": "pnpm --filter frontend run dev"
+  },
+  "_workspacesRemoved": [
+    "backend",
+    "frontend"
+  ]
+}

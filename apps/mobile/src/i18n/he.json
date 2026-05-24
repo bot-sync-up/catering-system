@@ -1,0 +1,95 @@
+{
+  "app": {
+    "name": "Field Ops",
+    "loading": "טוען...",
+    "save": "שמור",
+    "cancel": "בטל",
+    "confirm": "אישור",
+    "back": "חזור",
+    "search": "חיפוש",
+    "online": "מחובר",
+    "offline": "לא מחובר",
+    "syncing": "מסנכרן...",
+    "synced": "מסונכרן",
+    "pending": "{{count}} ממתינים לסנכרון"
+  },
+  "auth": {
+    "login": "כניסה",
+    "logout": "התנתקות",
+    "phone": "טלפון",
+    "code": "קוד אימות",
+    "biometric": "כניסה עם Face ID / טביעת אצבע",
+    "selectRole": "בחר תפקיד"
+  },
+  "roles": {
+    "manager": "מנהל",
+    "agent": "סוכן",
+    "kitchen": "מטבח",
+    "shift": "משמרת",
+    "driver": "נהג",
+    "customer": "לקוח"
+  },
+  "tabs": {
+    "home": "ראשי",
+    "tasks": "משימות",
+    "list": "רשימה",
+    "checkin": "צ׳ק-אין",
+    "scan": "סריקה",
+    "notes": "הערות",
+    "leads": "לידים",
+    "orders": "הזמנות",
+    "deliveries": "משלוחים",
+    "shifts": "משמרות",
+    "more": "עוד"
+  },
+  "tasks": {
+    "title": "משימות",
+    "new": "משימה חדשה",
+    "status": {
+      "pending": "ממתין",
+      "in_progress": "בביצוע",
+      "done": "הושלם",
+      "cancelled": "בוטל"
+    },
+    "addPhoto": "הוסף צילום",
+    "queued": "בתור לעלייה"
+  },
+  "checkin": {
+    "title": "צ׳ק-אין",
+    "in": "כניסה",
+    "out": "יציאה",
+    "location": "מיקום נוכחי"
+  },
+  "notes": {
+    "title": "הערות",
+    "add": "הוסף הערה"
+  },
+  "scan": {
+    "title": "סריקת ברקוד",
+    "scanned": "נסרק: {{value}}"
+  },
+  "signature": {
+    "title": "חתימה דיגיטלית",
+    "save": "שמור חתימה",
+    "clear": "נקה"
+  },
+  "delivery": {
+    "title": "משלוחים",
+    "eta": "הגעה משוערת: {{eta}}",
+    "navigate": "ניווט"
+  },
+  "notifications": {
+    "newOrder": "הזמנה חדשה",
+    "payment": "תשלום התקבל",
+    "geofence": "נכנסת לאזור: {{name}}",
+    "shift": "תזכורת משמרת",
+    "task": "משימה חדשה",
+    "lead": "ליד חדש",
+    "dndHours": "שעות שקט: לא נשלחות התראות"
+  },
+  "errors": {
+    "generic": "אירעה שגיאה",
+    "offline": "אין חיבור — הפעולה תישמר ותסונכרן מאוחר יותר",
+    "noPermission": "אין הרשאה לבצע פעולה זו"
+  }
+}

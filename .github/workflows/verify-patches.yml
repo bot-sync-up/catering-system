@@ -1,0 +1,64 @@
+name: Verify Patches
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify-patches:
+    name: Run verify-patches.ts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install tsx
+        run: npm install -g tsx
+
+      - name: Run verify-patches
+        id: verify
+        run: |
+          tsx patches-apply/verify-patches.ts . > verify-result.json
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Upload verify report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-result
+          path: verify-result.json
+
+      - name: Show summary
+        if: always()
+        run: |
+          echo "## Verify Patches Result" >> $GITHUB_STEP_SUMMARY
+          if [ -f verify-result.json ]; then
+            STATUS=$(node -e "console.log(require('./verify-result.json').status)")
+            PASSED=$(node -e "console.log(require('./verify-result.json').summary.passed)")
+            FAILED=$(node -e "console.log(require('./verify-result.json').summary.failed)")
+            WARN=$(node -e "console.log(require('./verify-result.json').summary.warnings)")
+            TOTAL=$(node -e "console.log(require('./verify-result.json').summary.totalPatches)")
+            echo "- **Overall status**: \`$STATUS\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Passed**: $PASSED / $TOTAL" >> $GITHUB_STEP_SUMMARY
+            echo "- **Failed**: $FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "- **Warnings**: $WARN" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Per-patch breakdown" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            node -e "const r=require('./verify-result.json'); console.log(JSON.stringify(r.patches.map(p=>({id:p.id,status:p.status,hits:p.hits})), null, 2))" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "verify-result.json was not produced" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Fail if patches failed
+        if: steps.verify.outcome == 'failure'
+        run: exit 1

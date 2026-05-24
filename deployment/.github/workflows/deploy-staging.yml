@@ -1,0 +1,69 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to staging
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.example.co.il
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push images
+        uses: docker/bake-action@v4
+        with:
+          push: true
+          set: |
+            *.tags=ghcr.io/${{ github.repository }}/{{.Name}}:staging-${{ github.sha }}
+            *.tags=ghcr.io/${{ github.repository }}/{{.Name}}:staging-latest
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /opt/app
+            git pull origin develop
+            docker compose -f deployment/docker/docker-compose.yml \
+                           -f deployment/docker/docker-compose.prod.yml \
+                           pull
+            docker compose -f deployment/docker/docker-compose.yml \
+                           -f deployment/docker/docker-compose.prod.yml \
+                           up -d --remove-orphans
+            docker system prune -af --filter "until=72h"
+
+      - name: Smoke test
+        run: |
+          for i in 1 2 3 4 5; do
+            if curl -fsS https://staging.example.co.il/healthz; then exit 0; fi
+            sleep 10
+          done
+          exit 1
+
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            { "text": "Staging deploy ${{ job.status }} (${{ github.sha }})" }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

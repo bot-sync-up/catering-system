@@ -1,0 +1,79 @@
+{
+  "expo": {
+    "name": "Field Ops",
+    "slug": "field-ops-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "fieldops",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fieldops.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "כדי לצלם תמונות של משימות וברקודים",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "כדי לעקוב אחר מיקום הנהג ולהפעיל גיאופנסינג",
+        "NSLocationWhenInUseUsageDescription": "כדי להציג את מיקומך הנוכחי",
+        "NSPhotoLibraryUsageDescription": "כדי לצרף תמונות למשימות",
+        "NSFaceIDUsageDescription": "כניסה מאובטחת באמצעות Face ID",
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"]
+      }
+    },
+    "android": {
+      "package": "com.fieldops.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F172A"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ],
+      "googleServicesFile": "./google-services.json"
+    },
+    "extra": {
+      "eas": { "projectId": "00000000-0000-0000-0000-000000000000" },
+      "apiBaseUrl": "https://api.fieldops.example.com",
+      "fcmSenderId": "000000000000"
+    },
+    "plugins": [
+      "expo-localization",
+      [
+        "expo-camera",
+        { "cameraPermission": "מתבקשת גישה למצלמה לצורך צילום משימות" }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "נדרש מיקום ברקע לגיאופנסינג",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        { "icon": "./assets/notification-icon.png", "color": "#0F172A" }
+      ],
+      [
+        "expo-local-authentication",
+        { "faceIDPermission": "כניסה מאובטחת באמצעות Face ID" }
+      ]
+    ],
+    "locales": {
+      "he": "./assets/locales/he.json"
+    }
+  }
+}

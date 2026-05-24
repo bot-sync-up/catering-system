@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/pci-validator",
+  "version": "1.0.0",
+  "description": "בודק שטוקנים/לוגים/payloads לא מכילים PAN/CVV",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  }
+}

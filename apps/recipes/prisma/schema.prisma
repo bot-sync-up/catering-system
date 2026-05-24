@@ -1,0 +1,123 @@
+// Prisma schema - Kitchen / Recipes management
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// =================== Catalog ===================
+
+model Product {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  unit        String          // kg, g, l, ml, unit
+  category    String?
+  notes       String?
+  prices      SupplierPrice[]
+  ingredients RecipeIngredient[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Supplier {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  phone     String?
+  prices    SupplierPrice[]
+  createdAt DateTime        @default(now())
+}
+
+model SupplierPrice {
+  id         String   @id @default(cuid())
+  productId  String
+  supplierId String
+  price      Float    // per `unit` of product
+  unit       String
+  notes      String?
+  validFrom  DateTime @default(now())
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  @@index([productId])
+}
+
+// =================== Recipes ===================
+
+model Recipe {
+  id            String          @id @default(cuid())
+  name          String
+  category      String?         // appetizer / main / dessert
+  defaultServings Int           @default(10)
+  markupPct     Float           @default(200) // % markup from cost
+  currentVersionId String?      @unique
+  versions      RecipeVersion[] @relation("RecipeVersions")
+  currentVersion RecipeVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model RecipeVersion {
+  id           String             @id @default(cuid())
+  recipeId     String
+  parentId     String?            // git-like parent
+  tier         String             // BASIC | VIP
+  label        String             // v1, v2, "kosher", etc
+  message      String?            // commit message
+  servings     Int                @default(10)
+  instructions String?            // markdown
+  prepMinutes  Int                @default(60)
+  cookMinutes  Int                @default(0)
+  recipe       Recipe             @relation("RecipeVersions", fields: [recipeId], references: [id], onDelete: Cascade)
+  parent       RecipeVersion?     @relation("VersionParent", fields: [parentId], references: [id])
+  children     RecipeVersion[]    @relation("VersionParent")
+  ingredients  RecipeIngredient[]
+  prepTasks    PrepTask[]
+  current      Recipe?            @relation("CurrentVersion")
+  createdAt    DateTime           @default(now())
+  @@index([recipeId])
+}
+
+model RecipeIngredient {
+  id        String        @id @default(cuid())
+  versionId String
+  productId String
+  qty       Float         // qty per defaultServings
+  unit      String
+  notes     String?
+  version   RecipeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  product   Product       @relation(fields: [productId], references: [id])
+  @@index([versionId])
+}
+
+// =================== Prep planning ===================
+
+model Event {
+  id        String     @id @default(cuid())
+  name      String
+  date      DateTime
+  guests    Int        @default(50)
+  notes     String?
+  prepTasks PrepTask[]
+  createdAt DateTime   @default(now())
+}
+
+model PrepTask {
+  id          String        @id @default(cuid())
+  eventId     String?
+  versionId   String
+  title       String
+  station     String?       // hot / cold / pastry
+  assignee    String?       // worker name
+  startAt     DateTime
+  durationMin Int
+  parallel    Boolean       @default(false) // can run in parallel with others
+  mustPrep    Boolean       @default(true)  // appears in Gantt
+  status      String        @default("planned") // planned | doing | done
+  servings    Int           @default(10)
+  event       Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  version     RecipeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  @@index([eventId])
+  @@index([startAt])
+}

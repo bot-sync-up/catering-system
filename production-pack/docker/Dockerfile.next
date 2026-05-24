@@ -1,0 +1,71 @@
+# syntax=docker/dockerfile:1.7
+# Multi-stage build for Next.js standalone output.
+# Expects the app to use `output: 'standalone'` in next.config.{js,mjs}.
+
+ARG NODE_VERSION=20.18.0
+ARG ALPINE_VERSION=3.20
+
+# ---------- deps ----------
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* .npmrc* ./
+RUN \
+  if [ -f pnpm-lock.yaml ]; then \
+    corepack enable && pnpm install --frozen-lockfile --prod=false; \
+  elif [ -f yarn.lock ]; then \
+    yarn install --frozen-lockfile; \
+  else \
+    npm ci; \
+  fi
+
+# ---------- builder ----------
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS builder
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Allow build-time env without baking secrets
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+RUN \
+  if [ -f pnpm-lock.yaml ]; then \
+    corepack enable && pnpm build; \
+  elif [ -f yarn.lock ]; then \
+    yarn build; \
+  else \
+    npm run build; \
+  fi
+
+# ---------- runner ----------
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+RUN apk add --no-cache wget tini && \
+    addgroup -S -g 1001 nodejs && \
+    adduser  -S -u 1001 -G nodejs nextjs
+
+# next.config standalone output places a minimal node_modules + server.js under .next/standalone
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+EXPOSE 3000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=45s --retries=5 \
+  CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "server.js"]

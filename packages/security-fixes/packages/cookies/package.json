@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/cookies",
+  "version": "1.0.0",
+  "description": "תצורת cookies מאובטחת - Secure + httpOnly + sameSite=strict",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  }
+}

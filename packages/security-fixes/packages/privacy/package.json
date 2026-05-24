@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/privacy",
+  "version": "1.0.0",
+  "description": "זכויות נושא מידע - חוק הגנת הפרטיות (ישראל) + GDPR",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  }
+}

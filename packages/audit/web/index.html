@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>יומן ביקורת — ענה את השואל</title>
+    <style>
+      :root {
+        --bg: #f6f7fb;
+        --card: #ffffff;
+        --border: #e2e6ee;
+        --text: #1f2533;
+        --muted: #6b7280;
+        --accent: #2b5fd9;
+        --danger: #d83a3a;
+        --success: #2f8f4f;
+      }
+      * { box-sizing: border-box; }
+      body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        direction: rtl;
+        text-align: right;
+      }
+      header {
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      h1 { font-size: 18px; margin: 0; }
+      main { padding: 16px 24px; }
+      .filters {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .filters label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 2px; }
+      .filters input, .filters select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font: inherit;
+      }
+      .actions { display: flex; gap: 8px; align-items: end; }
+      button {
+        padding: 8px 14px;
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font: inherit;
+      }
+      button.secondary { background: white; color: var(--accent); }
+      table {
+        width: 100%;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-collapse: collapse;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 13px;
+      }
+      th, td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      th { background: #eef1f7; text-align: right; font-weight: 600; }
+      tr:hover td { background: #fafbfd; }
+      .badge {
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-block;
+      }
+      .badge.create { background: #e2f4e6; color: var(--success); }
+      .badge.update { background: #e3ebfb; color: var(--accent); }
+      .badge.delete { background: #fde0e0; color: var(--danger); }
+      .badge.login_failure { background: #fde0e0; color: var(--danger); }
+      .badge.login_success { background: #e2f4e6; color: var(--success); }
+      .badge.official_tag_change { background: #fff2cf; color: #8a6300; }
+      .badge.permission_denied { background: #fde0e0; color: var(--danger); }
+      .badge.read_sensitive { background: #fff2cf; color: #8a6300; }
+      .badge.export { background: #ece1f7; color: #663399; }
+      .pager { display: flex; gap: 8px; align-items: center; margin-top: 12px; justify-content: flex-start; }
+      .json-cell { font-family: 'Consolas', monospace; font-size: 11px; max-width: 320px; word-break: break-all; }
+      details > summary { cursor: pointer; color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

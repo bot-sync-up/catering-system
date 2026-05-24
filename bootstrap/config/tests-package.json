@@ -1,0 +1,16 @@
+{
+  "name": "@catering/tests-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "E2E tests for the catering monorepo (Playwright + Vitest)",
+  "scripts": {
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:smoke": "vitest run --include 'smoke/**'"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "vitest": "^2.1.8",
+    "tsx": "^4.19.2"
+  }
+}

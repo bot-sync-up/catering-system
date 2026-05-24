@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnp.*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.prod
+.env.production
+!.env.example
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Test artifacts
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Secrets
+secrets/*.pem
+secrets/*.key
+secrets/private*
+!secrets/README.md
+!secrets/.gitkeep
+
+# Generated
+generated/
+.prisma/
+prisma/migrations/dev/
+
+# Backups / dumps
+*.sql.gz
+*.dump
+*.bak
+
+# Bootstrap/Patches artifacts
+.bootstrap-backup-*/
+.patches-backup-*/
+.patches-applied.log
+*.audit-bak
+*.imports-bak
+verify-result.json
+verify-result.err

@@ -1,0 +1,80 @@
+{
+  "title": "Business KPIs",
+  "uid": "business-kpi",
+  "schemaVersion": 39,
+  "timezone": "Asia/Jerusalem",
+  "refresh": "1m",
+  "tags": ["business", "kpi"],
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "הזמנות (24 שעות)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(increase(orders_created_total[24h]))" }]
+    },
+    {
+      "id": 2,
+      "title": "הכנסות (24 שעות, ש\"ח)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "targets": [{ "expr": "sum(increase(orders_revenue_ils_total[24h]))" }],
+      "fieldConfig": { "defaults": { "unit": "currencyILS" } }
+    },
+    {
+      "id": 3,
+      "title": "משתמשים פעילים",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "targets": [{ "expr": "sum(active_users)" }]
+    },
+    {
+      "id": 4,
+      "title": "אחוז המרה",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(checkout_completed_total[1h])) / sum(rate(checkout_started_total[1h])) * 100"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } }
+    },
+    {
+      "id": 5,
+      "title": "הזמנות לפי שעה",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [
+        { "expr": "sum(rate(orders_created_total[5m])) * 300", "legendFormat": "orders/5m" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "הכנסות מצטברות",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        { "expr": "sum(increase(orders_revenue_ils_total[1h]))", "legendFormat": "ILS/h" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyILS" } }
+    },
+    {
+      "id": 7,
+      "title": "Top 10 מוצרים",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "targets": [
+        { "expr": "topk(10, sum by(product) (increase(product_sales_total[24h])))" }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "תשלומים שנכשלו",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "targets": [{ "expr": "sum(increase(payment_failures_total[24h]))" }]
+    }
+  ]
+}

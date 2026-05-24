@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1.7
+# Gateway API service (Node.js, e.g. Fastify/Express/Nest).
+ARG NODE_VERSION=20.18.0
+ARG ALPINE_VERSION=3.20
+
+# ---------- deps ----------
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS deps
+WORKDIR /app
+COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
+RUN \
+  if [ -f pnpm-lock.yaml ]; then corepack enable && pnpm install --frozen-lockfile; \
+  elif [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
+  else npm ci; fi
+
+# ---------- build ----------
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build:gateway || npm run build || true
+# Trim to prod deps only
+RUN npm prune --omit=dev
+
+# ---------- runner ----------
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=4000
+
+RUN apk add --no-cache wget tini && \
+    addgroup -S -g 1001 nodejs && \
+    adduser  -S -u 1001 -G nodejs gateway
+
+COPY --from=build --chown=gateway:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=gateway:nodejs /app/dist ./dist
+COPY --from=build --chown=gateway:nodejs /app/package.json ./package.json
+
+USER gateway
+EXPOSE 4000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
+  CMD wget -qO- http://127.0.0.1:4000/health || exit 1
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "dist/gateway/main.js"]

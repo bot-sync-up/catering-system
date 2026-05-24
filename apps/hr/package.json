@@ -1,0 +1,20 @@
+{
+  "name": "hr-shifts-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "פלטפורמת HR – תיק עובד ומשמרות (RTL עברית)",
+  "scripts": {
+    "dev": "concurrently -n server,client -c green,cyan \"pnpm --filter server run dev\" \"pnpm --filter client run dev\"",
+    "build": "pnpm --filter server run build && pnpm --filter client run build",
+    "start": "pnpm --filter server run start",
+    "db:migrate": "pnpm --filter server run db:migrate",
+    "db:seed": "pnpm --filter server run db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  },
+  "_workspacesRemoved": [
+    "server",
+    "client"
+  ]
+}
