@@ -1,0 +1,14 @@
+{
+  "name": "@security-fixes/icount-fallback",
+  "version": "1.0.0",
+  "description": "iCount with automatic fallback to Green Invoice / Rivhit",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

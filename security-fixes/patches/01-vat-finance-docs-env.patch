@@ -1,0 +1,16 @@
+# תיקון #1 - מע"מ 17% → 18% (תקף מ-01/01/2025)
+# קובץ יעד: agent-a31b566159e7cc878/finance-docs/.env.example
+# רציונל: ב-01/01/2025 העלה משרד האוצר את מע"מ מ-17% ל-18%
+#         (חוק התכנית הכלכלית לשנת 2025)
+
+--- a/agent-a31b566159e7cc878/finance-docs/.env.example
++++ b/agent-a31b566159e7cc878/finance-docs/.env.example
+@@ -4,7 +4,7 @@ JWT_SECRET="change-me"
+ PORT=3000
+
+ # VAT
+-VAT_RATE=0.17
++VAT_RATE=0.18
+
+ # Email (SMTP)
+ SMTP_HOST=

@@ -1,0 +1,14 @@
+{
+  "name": "@security-fixes/consent-ledger",
+  "version": "1.0.0",
+  "description": "Marketing consent with double opt-in and immutable hash-chain log",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

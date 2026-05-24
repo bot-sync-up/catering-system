@@ -1,0 +1,65 @@
+# תיקון #13 - Cardcom Zero-PCI Compliance
+# קובץ יעד: agent-a91fe015c553e924f/packages/integrations/cardcom/src/types/index.ts
+#           (שורות 111-119 – TokenizeInputSchema)
+# בעיה:
+#   - TokenizeInputSchema מקבל cardNumber + cvv ישירות → המערכת
+#     נמצאת ב-PCI-DSS Scope (SAQ-D), עלות תפעולית גבוהה + סיכון משפטי.
+#   - חוק הגנת הפרטיות תיקון 13 דורש מינימליזציה של נתונים רגישים.
+# פתרון: לאסור על הקוד לקבל פרטי כרטיס. רק token שמתקבל מ-Cardcom
+#         LowProfile (iframe מתארחת אצלם → PCI SAQ-A).
+
+--- a/agent-a91fe015c553e924f/packages/integrations/cardcom/src/types/index.ts
++++ b/agent-a91fe015c553e924f/packages/integrations/cardcom/src/types/index.ts
+@@ -108,15 +108,38 @@ export interface RefundResult {
+   raw: unknown;
+ }
+
+-// ===== Tokenize =====
+-export const TokenizeInputSchema = z.object({
+-  cardNumber: z.string().min(12).max(19).optional(),
+-  expiryMonth: z.number().int().min(1).max(12).optional(),
+-  expiryYear: z.number().int().min(2024).max(2099).optional(),
+-  cvv: z.string().min(3).max(4).optional(),
+-  // Or use a previous transaction id to tokenize
+-  fromTransactionId: z.string().optional(),
+-  customerExternalId: z.string().optional(),
+-});
++// ===== Tokenize =====
++// PCI-DSS Zero-Scope: אסור להעביר cardNumber/cvv דרך השרתים שלנו.
++// המערכת מקבלת token בלבד (Cardcom LowProfile / TerminalNumber).
++// בכך אנחנו ב-SAQ-A — עלות ביקורת מינימלית.
++//
++// אופציה 1: token שכבר נוצר ב-iframe של Cardcom (LowProfile).
++// אופציה 2: fromTransactionId — לטוקנז עסקה קודמת.
++export const TokenizeInputSchema = z.object({
++  // ---------------------------------------------------------------
++  // PCI HARD GUARD: refuse anything that smells like raw card data.
++  // ---------------------------------------------------------------
++  lowProfileToken: z.string().min(20).optional(),
++  fromTransactionId: z.string().optional(),
++  customerExternalId: z.string().optional(),
++})
++  .strict() // אוסר שדות נוספים — חוסם cardNumber/cvv שיוזרקו במקרה
++  .refine(
++    (v) => Boolean(v.lowProfileToken || v.fromTransactionId),
++    'חובה לספק lowProfileToken (מ-LowProfile iframe) או fromTransactionId',
++  )
++  .refine(
++    // הגנה אחרונה — אם מישהו עוקף סוג TS וחילופי שדות, ננעל ב-runtime
++    (v) => {
++      const banned = ['cardNumber', 'pan', 'cvv', 'cvc', 'expiry', 'expiryMonth', 'expiryYear'];
++      for (const k of Object.keys(v)) {
++        if (banned.includes(k)) return false;
++      }
++      return true;
++    },
++    'PCI-violation: cardNumber/cvv אסורים מלהיכנס לקוד; השתמש ב-LowProfile token בלבד',
++  );
++
+ export type TokenizeInput = z.infer<typeof TokenizeInputSchema>;
+
+
+# ----------------------------------------------------------------
+# בנוסף: ב-CardComClient.ts יש להסיר כל קוד שבונה body עם cardNumber
+# ולשלוח טוקן בלבד ל-endpoint של Cardcom.
+# ----------------------------------------------------------------

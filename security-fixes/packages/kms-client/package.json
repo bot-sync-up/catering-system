@@ -1,0 +1,16 @@
+{
+  "name": "@security-fixes/kms-client",
+  "version": "1.0.0",
+  "description": "Unified envelope-encryption client for AWS KMS / GCP KMS / HashiCorp Vault",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@aws-sdk/client-kms": "^3.600.0",
+    "@google-cloud/kms": "^4.5.0",
+    "node-vault": "^0.10.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

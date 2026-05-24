@@ -1,0 +1,66 @@
+# תיקון #10 - Cookie Secure / HttpOnly / SameSite
+# קבצי יעד: כל res.cookie / res.clearCookie במערכת (express).
+#           הסקירה לא מצאה שימוש בקוד מקור — אך מספקים patch תבנית
+#           ליישום במקומות שייושמו cookies בהמשך (auth tokens, CSRF).
+#
+# בעיה: cookies ללא secure ניתנים ליירוט ב-HTTP פתוח. ללא httpOnly —
+#       JS יכול לקרוא אותם (גניבת session ע"י XSS).
+# פתרון: לכפות secure בפרודקשן + httpOnly + sameSite='strict'.
+
+# ----------------------------------------------------------------
+# 1) Helper מרכזי (להוסיף בכל פרויקט תחת src/lib/cookies.ts):
+# ----------------------------------------------------------------
++import type { CookieOptions, Response } from 'express';
++
++export const SECURE_COOKIE_OPTIONS: CookieOptions = {
++  httpOnly: true,
++  secure: process.env.NODE_ENV === 'production',
++  sameSite: 'strict',
++  path: '/',
++};
++
++export function setSessionCookie(
++  res: Response,
++  name: string,
++  value: string,
++  maxAgeMs: number,
++): void {
++  res.cookie(name, value, {
++    ...SECURE_COOKIE_OPTIONS,
++    maxAge: maxAgeMs,
++  });
++}
++
++export function clearSessionCookie(res: Response, name: string): void {
++  res.clearCookie(name, SECURE_COOKIE_OPTIONS);
++}
+
+# ----------------------------------------------------------------
+# 2) דוגמה לשינוי של קריאה קיימת ל-res.cookie:
+# ----------------------------------------------------------------
+-res.cookie('accessToken', token, { maxAge: 15 * 60 * 1000 });
++res.cookie('accessToken', token, {
++  httpOnly: true,
++  secure: process.env.NODE_ENV === 'production',
++  sameSite: 'strict',
++  maxAge: 15 * 60 * 1000,
++  path: '/',
++});
+
+# ----------------------------------------------------------------
+# 3) Express level — להוסיף ב-app boot:
+# ----------------------------------------------------------------
++if (process.env.NODE_ENV === 'production') {
++  app.set('trust proxy', 1); // מאחורי load balancer; חובה כדי שsecure יעבוד
++}
+
+# ----------------------------------------------------------------
+# 4) הוראת סריקה לזיהוי שימושים קיימים שדורשים עדכון:
+# ----------------------------------------------------------------
+# Bash:
+#   grep -rnE 'res\.cookie\(' --include='*.ts' --include='*.js' \
+#     --exclude-dir=node_modules
+#
+# PowerShell:
+#   Get-ChildItem -Recurse -Include *.ts,*.js -Exclude node_modules |
+#     Select-String -Pattern 'res\.cookie\('
