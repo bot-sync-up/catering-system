@@ -1,0 +1,91 @@
+{
+  "slo": {
+    "ordering": {
+      "http_req_duration": {
+        "p95_ms": 500,
+        "p99_ms": 1000,
+        "avg_ms": 200
+      },
+      "http_req_failed": {
+        "rate": 0.01
+      },
+      "checks": {
+        "rate": 0.99
+      }
+    },
+    "payment": {
+      "http_req_duration": {
+        "p95_ms": 2000,
+        "p99_ms": 4000
+      },
+      "http_req_failed": {
+        "rate": 0.005
+      },
+      "rps_target": 50
+    },
+    "ocr_upload": {
+      "http_req_duration": {
+        "p95_ms": 15000,
+        "p99_ms": 25000
+      },
+      "http_req_failed": {
+        "rate": 0.02
+      }
+    },
+    "event_creation": {
+      "http_req_duration": {
+        "p95_ms": 1500,
+        "p99_ms": 3000
+      },
+      "guests_per_event": 700,
+      "admins_per_event": 10
+    },
+    "portal_browse": {
+      "http_req_duration": {
+        "p95_ms": 800,
+        "p99_ms": 1500
+      },
+      "http_req_failed": {
+        "rate": 0.01
+      }
+    },
+    "spike": {
+      "max_vus": 500,
+      "http_req_duration": {
+        "p95_ms": 1500
+      },
+      "http_req_failed": {
+        "rate": 0.05
+      }
+    }
+  },
+  "regression": {
+    "fail_threshold_pct": 10,
+    "warn_threshold_pct": 5,
+    "compare_against": "main"
+  },
+  "infra": {
+    "node": {
+      "cpu_pct_max": 75,
+      "rss_mb_max": 1024,
+      "event_loop_lag_ms_max": 50
+    },
+    "postgres": {
+      "connections_max": 200,
+      "long_query_ms": 1000,
+      "cache_hit_ratio_min": 0.95
+    },
+    "redis": {
+      "slowlog_ms_max": 10,
+      "memory_pct_max": 75,
+      "evicted_keys_max": 0
+    },
+    "web_vitals": {
+      "lcp_ms": 2500,
+      "inp_ms": 200,
+      "cls": 0.1,
+      "ttfb_ms": 800,
+      "fcp_ms": 1800
+    }
+  }
+}
