@@ -3,6 +3,7 @@
  * שמור כקובץ ייחוס; לא נטען אוטומטית.
  */
 import express from 'express';
+import { auditContextMiddleware } from '@catering/audit-enforcement';
 import cookieParser from 'cookie-parser';
 import { securityHeaders } from './middleware/securityHeaders';
 import { globalLimiter } from './middleware/rateLimit';
@@ -17,7 +18,8 @@ export function buildApp() {
   const app = express();
 
   app.set('trust proxy', 1);
-  app.use(securityHeaders());
+  app.use(auditContextMiddleware());
+app.use(securityHeaders());
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
   app.use(globalLimiter());

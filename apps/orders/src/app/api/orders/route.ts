@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     (s, it) => s + it.quantity * it.unitPrice,
     0
   );
-  const tax = +(subtotal * 0.17).toFixed(2);
+  const tax = +(subtotal * 0.18).toFixed(2);
   const total = +(subtotal + tax).toFixed(2);
   const order = await prisma.order.create({
     data: {

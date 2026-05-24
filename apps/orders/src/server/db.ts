@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { attachPrismaAuditMiddleware } from '@catering/audit-enforcement';
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 

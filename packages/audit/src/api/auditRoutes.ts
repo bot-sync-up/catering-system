@@ -1,4 +1,5 @@
 import { Router, type Response } from 'express';
+import { auditContextMiddleware } from '@catering/audit-enforcement';
 import { z } from 'zod';
 import { auditQuerySchema, queryAuditLogs } from './auditQuery';
 import { streamAuditCsv } from '../export/csv';

@@ -1,6 +1,7 @@
 import "dotenv/config";
 import "express-async-errors";
 import express from "express";
+import { auditContextMiddleware } from '@catering/audit-enforcement';
 import cors from "cors";
 import morgan from "morgan";
 import path from "node:path";
@@ -10,6 +11,7 @@ import { shiftsRouter } from "./routes/shifts.js";
 import { evaluationsRouter } from "./routes/evaluations.js";
 
 const app = express();
+app.use(auditContextMiddleware());
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));   // 10mb לחתימות base64
 app.use(morgan("dev"));

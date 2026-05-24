@@ -46,12 +46,12 @@ const PATCHES: PatchCheck[] = [
     name: 'VAT 17% → 18%',
     severity: 'P0',
     patterns: [
-      { pattern: /\bvatRate\s*:\s*0\.17\b/g, description: 'vatRate: 0.17' },
-      { pattern: /\bVAT_RATE\s*=\s*0\.17\b/g, description: 'VAT_RATE = 0.17' },
-      { pattern: /\bVAT_RATE\s*=\s*17\b/g, description: 'VAT_RATE = 17' },
+      { pattern: /\bvatRate\s*:\s*0\.17\b/g, description: 'vatRate: 0.18' },
+      { pattern: /\bVAT_RATE\s*=\s*0\.17\b/g, description: 'VAT_RATE = 0.18' },
+      { pattern: /\bVAT_RATE\s*=\s*17\b/g, description: 'VAT_RATE = 18' },
       { pattern: /vat:\s*17[^0-9]/g, description: 'vat: 17' },
-      { pattern: /\*\s*1\.17\b/g, description: '* 1.17' },
-      { pattern: /\*\s*0\.17\b/g, description: '* 0.17' },
+      { pattern: /\*\s*1\.17\b/g, description: '* 1.18' },
+      { pattern: /\*\s*0\.17\b/g, description: '* 0.18' },
       { pattern: /מע"מ\s*17%/g, description: 'Hebrew UI 17%' },
     ],
     excludeFiles: [

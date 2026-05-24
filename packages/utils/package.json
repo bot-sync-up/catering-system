@@ -1,5 +1,5 @@
 {
-  "name": "@aneh/utils",
+  "name": "@catering/utils",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -8,10 +8,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^3.23.8",
+    "zod": "3.23.8",
     "date-fns": "^4.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.6.3"
+    "typescript": "5.6.3"
   }
 }

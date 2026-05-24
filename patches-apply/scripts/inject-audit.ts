@@ -66,7 +66,7 @@ function hasAuditAlready(content: string): boolean {
   return (
     content.includes('attachPrismaAuditMiddleware') ||
     content.includes('@catering/audit-enforcement') ||
-    content.includes('@aneh-hashoel/audit-enforcement')
+    content.includes('@catering/audit-enforcement')
   );
 }
 

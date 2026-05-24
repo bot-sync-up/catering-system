@@ -38,7 +38,7 @@ export const orderRouter = router({
         (s, it) => s + it.quantity * it.unitPrice,
         0
       );
-      const taxAmount = +(subtotal * 0.17).toFixed(2);
+      const taxAmount = +(subtotal * 0.18).toFixed(2);
       const totalAmount = +(subtotal + taxAmount).toFixed(2);
 
       const order = await prisma.order.create({

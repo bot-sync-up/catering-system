@@ -3,18 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "description": "פלטפורמת HR – תיק עובד ומשמרות (RTL עברית)",
-  "workspaces": [
-    "server",
-    "client"
-  ],
   "scripts": {
-    "dev": "concurrently -n server,client -c green,cyan \"npm --workspace server run dev\" \"npm --workspace client run dev\"",
-    "build": "npm --workspace server run build && npm --workspace client run build",
-    "start": "npm --workspace server run start",
-    "db:migrate": "npm --workspace server run db:migrate",
-    "db:seed": "npm --workspace server run db:seed"
+    "dev": "concurrently -n server,client -c green,cyan \"pnpm --filter server run dev\" \"pnpm --filter client run dev\"",
+    "build": "pnpm --filter server run build && pnpm --filter client run build",
+    "start": "pnpm --filter server run start",
+    "db:migrate": "pnpm --filter server run db:migrate",
+    "db:seed": "pnpm --filter server run db:seed"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"
-  }
+  },
+  "_workspacesRemoved": [
+    "server",
+    "client"
+  ]
 }

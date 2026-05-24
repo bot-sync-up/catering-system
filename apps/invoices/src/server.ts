@@ -1,5 +1,6 @@
 // finance-docs HTTP server.
 import express from 'express';
+import { auditContextMiddleware } from '@catering/audit-enforcement';
 import helmet from 'helmet';
 import { config } from './lib/config.js';
 import { documentsRouter } from './api/routes/documents.js';
@@ -11,6 +12,7 @@ import { remindersRouter } from './api/routes/reminders.js';
 import { renderDashboard } from './ui/pages/dashboard.js';
 
 const app = express();
+app.use(auditContextMiddleware());
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '2mb' }));
 

@@ -56,7 +56,7 @@ export class OrdersToFinanceAdapter extends BaseAdapter<'order.approved'> {
           quantity: it.quantity,
           unitPrice: it.unitPrice,
           totalPrice: it.quantity * it.unitPrice,
-          vatRate: 0.17,
+          vatRate: 0.18,
         })),
       },
       {

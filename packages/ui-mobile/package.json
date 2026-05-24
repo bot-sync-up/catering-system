@@ -5,7 +5,7 @@
   "types": "src/index.ts",
   "private": true,
   "peerDependencies": {
-    "react": "*",
-    "react-native": "*"
+    "react": "^18.2.0",
+    "react-native": ">=0.74.0 <0.75.0"
   }
 }

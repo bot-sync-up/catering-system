@@ -1,5 +1,5 @@
 /**
- * @aneh/auth — public surface
+ * @catering/auth — public surface
  */
 export * from './types';
 export * from './config';

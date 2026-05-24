@@ -3,17 +3,17 @@
   "version": "1.0.0",
   "description": "מערכת תפריטים ומחירונים דינמית עם חבילות, אלרגיות, קופונים ונאמנות",
   "private": true,
-  "workspaces": [
-    "server",
-    "client"
-  ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
-    "build": "npm run build -w server && npm run build -w client",
-    "test": "npm run test -w server",
-    "start": "npm start -w server"
+    "dev": "concurrently \"pnpm --filter server\" run dev \"pnpm --filter client\" run dev",
+    "build": "pnpm --filter server run build && pnpm --filter client run build",
+    "test": "pnpm --filter server run test",
+    "start": "pnpm --filter server start"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"
-  }
+  },
+  "_workspacesRemoved": [
+    "server",
+    "client"
+  ]
 }

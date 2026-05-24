@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import { auditContextMiddleware } from '@catering/audit-enforcement';
 import cors from 'cors';
 import multer from 'multer';
 import {
@@ -14,6 +15,7 @@ import {
 } from '@invoice-ocr/integrations-ocr';
 
 const app = express();
+app.use(auditContextMiddleware());
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 

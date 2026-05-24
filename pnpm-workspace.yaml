@@ -1,7 +1,20 @@
 # pnpm workspace - monorepo מאוחד (קייטרינג + פעולות עסקיות + אבטחה + Event Bus)
-# כל ה-apps, packages וה-services מנוהלים מכאן
+# כל ה-apps, packages וה-services מנוהלים מכאן.
+# nested workspaces (apps עם npm-workspaces פנימיים) הועברו ל-pnpm direct.
 packages:
   - "apps/*"
+  - "apps/expenses/backend"
+  - "apps/expenses/frontend"
+  - "apps/fleet/api"
+  - "apps/fleet/web"
+  - "apps/fleet/mobile"
+  - "apps/fleet/shared"
+  - "apps/hr/server"
+  - "apps/hr/client"
+  - "apps/marketing/server"
+  - "apps/marketing/client"
+  - "apps/menus/server"
+  - "apps/menus/client"
   - "packages/*"
   - "packages/integrations/*"
   - "packages/security-fixes/packages/*"

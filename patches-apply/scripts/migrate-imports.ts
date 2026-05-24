@@ -8,10 +8,10 @@
  * מיפוי:
  *   @aneh-hashoel/*       → @catering/*
  *   @aneh/*               → @catering/*
- *   @syncup/vat-engine    → @catering/vat
- *   @syncup/cardcom-production → @catering/cardcom-production
- *   @syncup/icount-production  → @catering/icount-production
- *   @syncup/privacy-portal     → @catering/privacy-portal
+ *   @catering/vat    → @catering/vat
+ *   @catering/cardcom-production → @catering/cardcom-production
+ *   @catering/icount-production  → @catering/icount-production
+ *   @catering/privacy-portal     → @catering/privacy-portal
  *
  * כל קובץ ששונה נשמר ל-<file>.imports-bak.
  */

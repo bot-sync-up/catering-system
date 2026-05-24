@@ -1,5 +1,6 @@
 // Re-export Prisma Client and types for consumers across the monorepo.
 import { PrismaClient } from "@prisma/client";
+import { attachPrismaAuditMiddleware } from '@catering/audit-enforcement';
 
 export * from "@prisma/client";
 

@@ -1,5 +1,5 @@
 {
-  "name": "@aneh/api",
+  "name": "@catering/api",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -8,14 +8,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@trpc/server": "^11.0.0-rc.648",
-    "zod": "^3.23.8",
-    "bullmq": "^5.28.1",
-    "ioredis": "^5.4.1",
-    "@aneh/db": "workspace:*",
-    "@aneh/auth": "workspace:*"
+    "@trpc/server": "11.0.0-rc.648",
+    "zod": "3.23.8",
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.2",
+    "@catering/db": "workspace:*",
+    "@catering/auth": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.6.3"
+    "typescript": "5.6.3"
   }
 }

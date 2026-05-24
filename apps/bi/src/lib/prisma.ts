@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { attachPrismaAuditMiddleware } from '@catering/audit-enforcement';
 
 declare global {
   // eslint-disable-next-line no-var

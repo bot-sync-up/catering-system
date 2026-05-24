@@ -54,3 +54,12 @@ prisma/migrations/dev/
 *.sql.gz
 *.dump
 *.bak
+
+# Bootstrap/Patches artifacts
+.bootstrap-backup-*/
+.patches-backup-*/
+.patches-applied.log
+*.audit-bak
+*.imports-bak
+verify-result.json
+verify-result.err

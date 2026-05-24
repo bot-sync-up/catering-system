@@ -158,7 +158,7 @@ if (unresolvedRefs.length) {
 }
 NODE_EOF
 )
-node -e "$NODE_FIX_DEPS" "$ROOT"
+node -e "$NODE_FIX_DEPS" _ "$ROOT"
 
 # ─── 6. המרת sub-package scripts מ-npm לpnpm ─────────────────────
 echo "[6/8] המרת scripts: 'npm --workspace X' → 'pnpm --filter X'"
@@ -208,7 +208,7 @@ for (const sub of SUBS) {
 }
 NODE_EOF
 )
-node -e "$NODE_FIX_SCRIPTS" "$ROOT"
+node -e "$NODE_FIX_SCRIPTS" _ "$ROOT"
 
 # ─── 7. אכיפת version pins על dependencies מובלעות ────────────
 echo "[7/8] אכיפת גרסאות אחידות (React/Next/Prisma/TS/zod/...)"
@@ -291,7 +291,7 @@ function walk(dir, depth) {
 walk(root, 0);
 NODE_EOF
 )
-node -e "$NODE_PIN_VERSIONS" "$ROOT"
+node -e "$NODE_PIN_VERSIONS" _ "$ROOT"
 
 # ─── 8. אכיפת peerDependencies על @aneh/ui ו-@field-ops/ui ─────
 echo "[8/8] אכיפת peerDependencies לחבילות UI"
@@ -320,7 +320,7 @@ for (const { pj, peers } of PEER_FIXES) {
 }
 NODE_EOF
 )
-node -e "$NODE_FIX_PEERS" "$ROOT"
+node -e "$NODE_FIX_PEERS" _ "$ROOT"
 
 echo
 echo "═══════════════════════════════════════════════════════════════"

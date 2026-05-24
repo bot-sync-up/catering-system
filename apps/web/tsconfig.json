@@ -4,11 +4,11 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"],
-      "@aneh/ui": ["../../packages/ui/src"],
-      "@aneh/api": ["../../packages/api/src"],
-      "@aneh/db": ["../../packages/db/src"],
-      "@aneh/auth": ["../../packages/auth/src"],
-      "@aneh/utils": ["../../packages/utils/src"]
+      "@catering/ui": ["../../packages/ui/src"],
+      "@catering/api": ["../../packages/api/src"],
+      "@catering/db": ["../../packages/db/src"],
+      "@catering/auth": ["../../packages/auth/src"],
+      "@catering/utils": ["../../packages/utils/src"]
     }
   },
   "include": [

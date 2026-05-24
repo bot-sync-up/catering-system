@@ -64,7 +64,7 @@ describe('E2E: ביטול אירוע — SAGA + compensation', () => {
       orderId: order.result.orderId!,
       customerId: order.result.customerId!,
       invoiceAmount: baseInput.quote.amount,
-      vatRate: 0.17,
+      vatRate: 0.18,
       paymentToken: 'tok_test_visa_4242',
       currency: 'ILS',
       notifyEmail: baseInput.customer.email,

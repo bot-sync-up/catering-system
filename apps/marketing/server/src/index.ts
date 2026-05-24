@@ -1,4 +1,5 @@
 import express from 'express';
+import { auditContextMiddleware } from '@catering/audit-enforcement';
 import cors from 'cors';
 import { env } from './lib/env.js';
 import { logger } from './lib/logger.js';
@@ -16,6 +17,7 @@ import { waWebhookRouter } from './routes/whatsappWebhook.js';
 
 const app = express();
 
+app.use(auditContextMiddleware());
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
