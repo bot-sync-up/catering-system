@@ -1,64 +1,14 @@
-# Dependencies
 node_modules/
-.pnpm-store/
-.yarn/
-
-# Builds
-dist/
-build/
-.next/
-out/
-*.tsbuildinfo
-
-# Env files (CRITICAL — never commit secrets)
 .env
 .env.local
-.env.production
-.env.development
-.env.staging
-*.env
-
-# IDE
+dist/
+build/
+*.log
+.DS_Store
+coverage/
 .vscode/
 .idea/
-*.swp
-*.swo
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-pnpm-debug.log*
-yarn-debug.log*
-logs/
-
-# Test coverage
-coverage/
-.nyc_output/
-
-# OS / temp
-*.tmp
-.cache/
-
-# Native mobile
-ios/Pods/
-ios/build/
-android/build/
-android/.gradle/
-android/local.properties
-*.keystore
-*.jks
-
-# Secrets / credentials
-*.pem
-*.key
-*.p12
-credentials.json
-service-account*.json
-github-app-private-key*
-
-# Database dumps
 *.sqlite
-*.db
-dump.rdb
+prisma/migrations/dev.db*
+uploads/
+tmp/
