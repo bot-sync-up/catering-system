@@ -1,0 +1,88 @@
+# חוקי תמחור דינמי — Sync Up Catering
+# כל מקדם מוכפל במחיר הבסיס. שילוב סופי = base * dow * season * holiday * tier * lead * competitor
+
+# מקדמי יום-בשבוע (0=ראשון ... 6=שבת)
+day_of_week:
+  - day: 0
+    factor: 0.95
+    note: ראשון — ביקוש בינוני
+  - day: 1
+    factor: 0.92
+    note: שני — שקט
+  - day: 2
+    factor: 0.93
+  - day: 3
+    factor: 0.97
+  - day: 4
+    factor: 1.20
+    note: חמישי — שיא ביקוש (חתונות, חינות)
+  - day: 5
+    factor: 0.90
+    note: שישי — מוגבל זמן בישול
+  - day: 6
+    factor: 0.85
+    note: שבת — אירועים מוגבלים
+
+# מקדמי עונה
+season:
+  spring: 1.08
+  summer: 1.15
+  autumn: 1.05
+  winter: 0.92
+
+# קרבה לחג (ימים לפני)
+holiday_proximity:
+  - days_before: 0
+    factor: 1.30
+    note: חג עצמו — שיא
+  - days_before: 1
+    factor: 1.25
+  - days_before: 2
+    factor: 1.20
+  - days_before: 3
+    factor: 1.15
+  - days_before: 7
+    factor: 1.05
+  - days_before: 14
+    factor: 1.00
+
+# שכבות לקוחות (לפי LTV / מעמד)
+guest_tiers:
+  vip:
+    factor: 0.92
+    note: לקוחות VIP — הנחה שימור
+  high:
+    factor: 0.97
+  medium:
+    factor: 1.00
+  low:
+    factor: 1.05
+    note: לקוח חדש או נמוך — אין מינוף
+
+# זמן הזמנה (lead time) — הזמנה מוקדמת זוכה בהנחה
+lead_time:
+  - days_min: 90
+    factor: 0.90
+    note: 3+ חודשים מראש — early bird
+  - days_min: 60
+    factor: 0.95
+  - days_min: 30
+    factor: 1.00
+  - days_min: 14
+    factor: 1.08
+  - days_min: 7
+    factor: 1.15
+  - days_min: 3
+    factor: 1.25
+    note: ראש קצר — תוספת לחץ ייצור
+
+# מקדם תחרותי — דורש מקור חיצוני (סקרי מחיר)
+competitor:
+  cheaper_than_market: 1.05
+  on_par: 1.00
+  more_expensive: 0.95
+
+# גבולות בטיחות
+guards:
+  min_multiplier: 0.75
+  max_multiplier: 1.60

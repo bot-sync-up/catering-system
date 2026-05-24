@@ -1,0 +1,43 @@
+{
+  "name": "@syncup/ai-suite",
+  "version": "0.1.0",
+  "description": "AI Suite עבור פלטפורמת קייטרינג Sync Up — צ'אטבוט, חיזוי ביקוש, תמחור דינמי, ניתוח סנטימנט, מטבח חכם, תובנות לקוח ועוד",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./chatbot": "./dist/chatbot/index.js",
+    "./forecasting": "./dist/forecasting/index.js",
+    "./pricing": "./dist/pricing/index.js",
+    "./sentiment": "./dist/sentiment/index.js",
+    "./kitchen": "./dist/kitchen/index.js",
+    "./insights": "./dist/insights/index.js",
+    "./docs": "./dist/docs/index.js",
+    "./cost": "./dist/cost/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
+    "ioredis": "^5.4.0",
+    "yaml": "^2.5.0",
+    "zod": "^3.23.0",
+    "date-fns": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "typescript": "^5.5.0",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
