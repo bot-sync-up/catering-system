@@ -1,0 +1,123 @@
+# Base values. Per-env overrides live in values-dev.yaml / values-staging.yaml / values-prod.yaml.
+global:
+  image:
+    registry: ghcr.io
+    repository: example/app
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  domain: example.com
+  env: production
+
+next:
+  enabled: true
+  image:
+    name: next
+    tag: "1.0.0"
+  replicaCount: 2
+  port: 3000
+  resources:
+    requests: { cpu: 200m, memory: 256Mi }
+    limits:   { cpu: 1000m, memory: 1Gi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  readinessPath: /api/health
+  livenessPath:  /api/health
+
+gateway:
+  enabled: true
+  image:
+    name: gateway
+    tag: "1.0.0"
+  replicaCount: 2
+  port: 4000
+  resources:
+    requests: { cpu: 200m, memory: 256Mi }
+    limits:   { cpu: 1000m, memory: 1Gi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+
+worker:
+  enabled: true
+  image:
+    name: worker
+    tag: "1.0.0"
+  replicaCount: 2
+  resources:
+    requests: { cpu: 200m, memory: 512Mi }
+    limits:   { cpu: 2000m, memory: 2Gi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 12
+    targetCPUUtilizationPercentage: 75
+  env:
+    WORKER_CONCURRENCY: "4"
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "25m"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload";
+  hosts:
+    - host: example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: next
+        - path: /api
+          pathType: Prefix
+          service: gateway
+  tls:
+    - secretName: app-tls
+      hosts: [example.com]
+
+config:
+  # Plain (non-secret) values copied into a ConfigMap.
+  NODE_ENV: production
+  NEXT_TELEMETRY_DISABLED: "1"
+  LOG_LEVEL: info
+
+secrets:
+  # Mapped 1:1 into a Secret. Values are placeholders — inject via External Secrets / Sealed Secrets.
+  DATABASE_URL: ""
+  REDIS_URL: ""
+  JWT_SECRET: ""
+  AES_KEY: ""
+
+persistence:
+  uploads:
+    enabled: true
+    size: 20Gi
+    storageClass: standard
+    accessMode: ReadWriteMany
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+
+nodeSelector: {}
+tolerations: []
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: app

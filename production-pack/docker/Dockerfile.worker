@@ -1,0 +1,40 @@
+# syntax=docker/dockerfile:1.7
+# Background worker (BullMQ / queue consumer).
+# Touches /tmp/worker-alive periodically as a liveness signal for HEALTHCHECK.
+ARG NODE_VERSION=20.18.0
+ARG ALPINE_VERSION=3.20
+
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS deps
+WORKDIR /app
+COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
+RUN \
+  if [ -f pnpm-lock.yaml ]; then corepack enable && pnpm install --frozen-lockfile; \
+  elif [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
+  else npm ci; fi
+
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build:worker || npm run build || true
+RUN npm prune --omit=dev
+
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN apk add --no-cache tini && \
+    addgroup -S -g 1001 nodejs && \
+    adduser  -S -u 1001 -G nodejs worker
+
+COPY --from=build --chown=worker:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=worker:nodejs /app/dist ./dist
+COPY --from=build --chown=worker:nodejs /app/package.json ./package.json
+
+USER worker
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD node -e "const fs=require('fs');const s=fs.statSync('/tmp/worker-alive');process.exit((Date.now()-s.mtimeMs)<60000?0:1)" || exit 1
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "dist/worker/main.js"]
