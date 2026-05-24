@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>תוצאות Smoke Tests</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --ok: #22c55e;
+      --fail: #ef4444;
+      --skip: #f59e0b;
+      --accent: #3b82f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Heebo', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 24px;
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--border);
+    }
+    h1 { margin: 0; font-size: 28px; }
+    .timestamp { color: var(--muted); font-size: 14px; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .card .value { font-size: 36px; font-weight: 700; }
+    .card .label { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .card.ok .value { color: var(--ok); }
+    .card.fail .value { color: var(--fail); }
+    .card.skip .value { color: var(--skip); }
+    .card.total .value { color: var(--accent); }
+    table {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: rgba(59,130,246,0.1);
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+    }
+    .empty-state code {
+      display: inline-block;
+      background: var(--bg);
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>תוצאות Smoke Tests</h1>
+      <div class="timestamp">טרם הורצו בדיקות</div>
+    </header>
+
+    <div class="empty-state">
+      <h2>אין עדיין תוצאות</h2>
+      <p>הרץ את ה-Smoke Tests כדי למלא את הדשבורד הזה:</p>
+      <code>bash smoke-tests/scripts/run-smoke.sh</code>
+      <p style="margin-top:24px;">
+        קובץ זה יוחלף אוטומטית בכל ריצה ע"י <code>generate-html.sh</code>.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

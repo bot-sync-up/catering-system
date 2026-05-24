@@ -1,0 +1,26 @@
+{
+  "name": "@catering/smoke-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smoke test harness — ensure everything is working before deploying",
+  "scripts": {
+    "smoke": "bash scripts/run-smoke.sh full",
+    "smoke:quick": "bash scripts/run-smoke.sh quick",
+    "smoke:full": "bash scripts/run-smoke.sh full",
+    "smoke:security": "vitest run tests/security",
+    "smoke:health": "vitest run tests/health",
+    "smoke:db": "vitest run tests/integration/db-connection.test.ts tests/integration/seed-loaded.test.ts",
+    "smoke:integrations": "vitest run tests/integration",
+    "smoke:e2e": "playwright test --config tests/e2e-quick/playwright.config.ts",
+    "smoke:dashboard": "bash dashboards/generate-html.sh",
+    "smoke:open": "node -e \"require('child_process').exec(process.platform==='win32'?'start dashboards/smoke-results.html':process.platform==='darwin'?'open dashboards/smoke-results.html':'xdg-open dashboards/smoke-results.html')\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@prisma/client": "^5.15.0",
+    "@types/node": "^20.14.0",
+    "ioredis": "^5.4.1",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
