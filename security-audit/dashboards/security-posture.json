@@ -1,0 +1,157 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "red", "value": 5}
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "expr": "sum(security_findings_open{severity=\"critical\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Critical findings (open)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "targets": [{"expr": "sum(security_findings_open{severity=\"high\"})", "refId": "A"}],
+      "title": "High findings (open)",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {"steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 5},
+            {"color": "red", "value": 15}
+          ]}
+        }
+      }
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "targets": [{"expr": "avg(security_sla_compliance_pct)", "refId": "A"}],
+      "title": "SLA compliance %",
+      "type": "gauge",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {"steps": [
+            {"color": "red", "value": null},
+            {"color": "yellow", "value": 80},
+            {"color": "green", "value": 95}
+          ]}
+        }
+      }
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "targets": [{"expr": "sum(security_secrets_detected_total)", "refId": "A"}],
+      "title": "Secrets detected (7d)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+      "id": 5,
+      "targets": [
+        {"expr": "sum by (severity) (security_findings_open)", "refId": "A", "legendFormat": "{{severity}}"}
+      ],
+      "title": "Open findings by severity (over time)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+      "id": 6,
+      "targets": [
+        {"expr": "sum by (tool) (rate(security_scan_findings_total[1h]))", "refId": "A", "legendFormat": "{{tool}}"}
+      ],
+      "title": "Findings by tool (hourly rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+      "id": 7,
+      "targets": [
+        {"expr": "histogram_quantile(0.95, rate(security_finding_age_days_bucket[7d]))", "refId": "A", "legendFormat": "p95 age (days)"}
+      ],
+      "title": "Mean time to remediate (MTTR)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+      "id": 8,
+      "targets": [
+        {"expr": "sum by (module) (security_audit_log_coverage_pct)", "refId": "A", "legendFormat": "{{module}}"}
+      ],
+      "title": "Audit log coverage (Israeli compliance)",
+      "type": "bargauge"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["security", "compliance", "israeli"],
+  "templating": {"list": []},
+  "time": {"from": "now-30d", "to": "now"},
+  "timepicker": {},
+  "timezone": "Asia/Jerusalem",
+  "title": "Security Posture — Israeli SaaS",
+  "uid": "security-posture-il",
+  "version": 1
+}

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configuration>
+  <context>
+    <name>israeli-app-context</name>
+    <desc>OWASP ZAP context — אפליקציה ישראלית עם אימות JWT</desc>
+    <inscope>true</inscope>
+    <incregexes>https://staging\.example\.co\.il.*</incregexes>
+    <excregexes>https://staging\.example\.co\.il/(logout|delete-account|admin/.*).*</excregexes>
+    <tech>
+      <include>Db.PostgreSQL</include>
+      <include>Db.MongoDB</include>
+      <include>Language.JavaScript</include>
+      <include>OS.Linux</include>
+      <include>SCM.Git</include>
+      <include>WS.Nginx</include>
+    </tech>
+    <urlparser>
+      <class>org.zaproxy.zap.model.StandardParameterParser</class>
+      <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
+    </urlparser>
+    <postparser>
+      <class>org.zaproxy.zap.model.StandardParameterParser</class>
+      <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
+    </postparser>
+    <authentication>
+      <type>3</type>
+      <strategy>EACH_RESP</strategy>
+      <pollurl/>
+      <pollfreq>60</pollfreq>
+      <pollunits>REQUESTS</pollunits>
+      <loggedin>\Qrole\E</loggedin>
+      <loggedout>\QunauthorizedAccess\E</loggedout>
+      <form>
+        <loginurl>https://staging.example.co.il/api/auth/login</loginurl>
+        <loginbody>{"email":"{%username%}","password":"{%password%}"}</loginbody>
+        <loginpageurl>https://staging.example.co.il/login</loginpageurl>
+      </form>
+    </authentication>
+    <users>
+      <user>1;true;cGVudGVzdEBleGFtcGxlLmNvLmls;3;cGVudGVzdEBleGFtcGxlLmNvLmls~U3Ryb25nUEAkc3dvcmQxMjM=~</user>
+    </users>
+    <forceduser>1</forceduser>
+    <session>
+      <type>2</type>
+    </session>
+    <authorization>
+      <type>0</type>
+      <basic>
+        <header/>
+        <body/>
+        <logic>AND</logic>
+        <code>-1</code>
+      </basic>
+    </authorization>
+  </context>
+</configuration>

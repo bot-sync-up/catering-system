@@ -1,0 +1,42 @@
+# CVE Allowlist — Accepted vulnerabilities with documented justification
+# All entries MUST have: reason, owner, accepted_date, expires_at, severity
+# Review before each expiry date.
+
+allowlist:
+  # === Examples (replace with real findings) ===
+
+  - id: CVE-2024-XXXXX
+    package: lodash
+    version: "<4.17.21"
+    reason: >
+      Prototype pollution — not exploitable in our context: no user input
+      reaches Object.assign / _.merge sinks. Confirmed by manual review.
+    owner: security@example.co.il
+    accepted_date: 2025-08-12
+    expires_at: 2026-08-12
+    severity: medium
+    proof_link: https://github.com/org/repo/issues/123
+
+  - id: GHSA-XXXX-XXXX-XXXX
+    package: axios
+    version: ">=1.0.0 <1.7.4"
+    reason: >
+      SSRF advisory only applies when allowAbsoluteUrls=true.
+      We enforce relative URLs via interceptor (see src/lib/http.ts).
+    owner: backend-lead@example.co.il
+    accepted_date: 2025-09-01
+    expires_at: 2026-03-01
+    severity: high
+    proof_link: https://github.com/org/repo/pull/456
+
+# === Snyk-specific ignores (mirror in configs/snyk.yml) ===
+snyk_ignores: []
+
+# === Policy ===
+policy:
+  max_acceptance_days: 365  # no exception lasts more than a year
+  required_reviewers: 2
+  block_severities_without_acceptance:
+    - critical
+    - high
+  notification_channel: '#security-alerts'

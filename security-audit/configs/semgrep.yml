@@ -1,0 +1,188 @@
+rules:
+  # === OWASP Top 10 — custom Israeli/Hebrew context ===
+
+  - id: hebrew-rtl-xss-bidi
+    pattern-either:
+      - pattern: |
+          $EL.innerHTML = $X
+      - pattern: |
+          dangerouslySetInnerHTML={{__html: $X}}
+    message: >
+      RTL/BiDi XSS risk: innerHTML/dangerouslySetInnerHTML with potentially Hebrew user input.
+      תווי BiDi (U+202E וכו') יכולים לזייף URL/UI. השתמש ב-textContent או sanitizer.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      owasp: 'A03:2021 - Injection'
+      cwe: 'CWE-79'
+
+  - id: sql-injection-string-concat
+    pattern-either:
+      - pattern: |
+          $CONN.query("..." + $X + "...")
+      - pattern: |
+          $CONN.query(`...${$X}...`)
+      - pattern: |
+          $CONN.execute("SELECT ... " + $X)
+    message: SQL injection via string concatenation. השתמש ב-prepared statements.
+    severity: ERROR
+    languages: [javascript, typescript, python]
+    metadata:
+      owasp: 'A03:2021 - Injection'
+      cwe: 'CWE-89'
+
+  - id: hardcoded-israeli-api-keys
+    pattern-regex: '(icount|cardcom|sendgrid|twilio|anthropic|openai)[_-]?(api[_-]?)?key\s*[:=]\s*["''][A-Za-z0-9_\-]{20,}["'']'
+    message: Hardcoded API key for Israeli/3rd-party service. העבר ל-Vault/env vars.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      exclude: ['*.test.*', '*.spec.*', 'tests/**', '__tests__/**']
+
+  - id: israeli-id-tz-in-logs
+    pattern-either:
+      - pattern: console.log(..., $TZ, ...)
+      - pattern: logger.$LEVEL(..., $TZ, ...)
+    pattern-where:
+      - metavariable-regex:
+          metavariable: $TZ
+          regex: '.*(teudat|tz|israeliId|userId|personalId).*'
+    message: לוג של ת"ז — אסור! ת"ז היא PII רגיש. הסר או mask.
+    severity: WARNING
+    languages: [javascript, typescript]
+
+  - id: broken-auth-no-rate-limit
+    pattern-either:
+      - pattern: |
+          app.post('/login', ...)
+      - pattern: |
+          router.post('/auth', ...)
+    pattern-not-inside: |
+      $X.use(rateLimit(...))
+      ...
+    message: Login endpoint ללא rate limiting. הוסף express-rate-limit.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      owasp: 'A07:2021 - Identification and Authentication Failures'
+
+  - id: insecure-jwt-no-verify
+    pattern-either:
+      - pattern: jwt.decode($T)
+      - pattern: jsonwebtoken.decode($T)
+    message: jwt.decode() ללא verify — תוקף יכול לזייף. השתמש ב-jwt.verify().
+    severity: ERROR
+    languages: [javascript, typescript]
+
+  - id: weak-crypto-md5-sha1
+    pattern-either:
+      - pattern: crypto.createHash("md5")
+      - pattern: crypto.createHash("sha1")
+      - pattern: hashlib.md5(...)
+      - pattern: hashlib.sha1(...)
+    message: Weak hash algorithm. השתמש ב-SHA-256+ או bcrypt/argon2 לסיסמאות.
+    severity: WARNING
+    languages: [javascript, typescript, python]
+    metadata:
+      cwe: 'CWE-327'
+
+  - id: ssrf-axios-user-url
+    pattern-either:
+      - pattern: axios.get($REQ.body.$URL)
+      - pattern: axios.get($REQ.query.$URL)
+      - pattern: fetch($REQ.body.$URL)
+    message: SSRF — בקשה ל-URL מבוקר על-ידי משתמש. הוסף allowlist + DNS resolution check.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      owasp: 'A10:2021 - SSRF'
+
+  - id: open-redirect
+    pattern-either:
+      - pattern: res.redirect($REQ.query.$URL)
+      - pattern: res.redirect($REQ.body.$URL)
+    message: Open redirect. validate את ה-URL מול allowlist.
+    severity: WARNING
+    languages: [javascript, typescript]
+
+  - id: nosql-injection-mongo
+    pattern: |
+      $COLL.find($REQ.body)
+    message: NoSQL injection — query מבנה מ-body. השתמש ב-sanitize-mongo או typed queries.
+    severity: ERROR
+    languages: [javascript, typescript]
+
+  - id: missing-csrf-protection
+    pattern-either:
+      - pattern: |
+          app.post(...)
+      - pattern: |
+          app.put(...)
+      - pattern: |
+          app.delete(...)
+    pattern-not-inside: |
+      app.use(csrf(...))
+      ...
+    message: state-changing endpoint ללא CSRF protection.
+    severity: INFO
+    languages: [javascript, typescript]
+    paths:
+      include: ['**/routes/**', '**/api/**']
+
+  - id: israeli-bank-account-cleartext
+    pattern-regex: '(bankAccount|bank_account|חשבון_בנק)\s*[:=]\s*["''][0-9]{6,}["'']'
+    message: מספר חשבון בנק ב-cleartext. הצפן (AES-256-GCM) לפני שמירה.
+    severity: ERROR
+    languages: [generic]
+
+  - id: vat-rate-hardcoded-not-18
+    pattern-regex: '(vat|מע"מ|maam)\s*[*=]\s*0\.1[567]\b'
+    message: שיעור מע"מ קשיח <18%. עדכן ל-0.18 (חוק ישראלי 2025).
+    severity: WARNING
+    languages: [generic]
+
+  - id: missing-helmet
+    pattern: |
+      const app = express()
+      ...
+    pattern-not-inside: |
+      const app = express()
+      ...
+      app.use(helmet(...))
+      ...
+    message: Express app ללא helmet. הוסף `app.use(helmet())`.
+    severity: WARNING
+    languages: [javascript, typescript]
+
+  - id: cors-wildcard
+    pattern-either:
+      - pattern: cors({origin: "*"})
+      - pattern: 'res.setHeader("Access-Control-Allow-Origin", "*")'
+    message: CORS פתוח לכל origin. הגדר allowlist.
+    severity: WARNING
+    languages: [javascript, typescript]
+
+  - id: eval-usage
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function($X)
+    message: eval/Function() — RCE risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+
+  - id: command-injection-exec
+    pattern-either:
+      - pattern: child_process.exec($X + $Y)
+      - pattern: child_process.exec(`...${$X}...`)
+      - pattern: os.system($X + $Y)
+    message: Command injection. השתמש ב-execFile עם array args.
+    severity: ERROR
+    languages: [javascript, typescript, python]
+
+  - id: path-traversal
+    pattern-either:
+      - pattern: fs.readFile($REQ.params.$P, ...)
+      - pattern: fs.readFileSync($REQ.query.$P)
+    message: Path traversal — נתיב מבוקר על-ידי משתמש. השתמש ב-path.resolve + allowlist.
+    severity: ERROR
+    languages: [javascript, typescript]
