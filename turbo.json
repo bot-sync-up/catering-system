@@ -1,24 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": [".env", ".env.local", "tsconfig.base.json"],
-  "globalEnv": [
-    "NODE_ENV",
-    "DATABASE_URL",
-    "REDIS_URL",
-    "JWT_SECRET",
-    "NEXTAUTH_SECRET"
-  ],
+  "globalDependencies": ["**/.env.*local", ".env"],
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "REDIS_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "dist/**",
-        "build/**",
-        "out/**"
-      ],
-      "env": ["NODE_ENV"]
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"]
     },
     "dev": {
       "cache": false,
@@ -28,28 +16,30 @@
       "dependsOn": ["^lint"],
       "outputs": []
     },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "inputs": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts"]
+    },
     "typecheck": {
       "dependsOn": ["^build"],
       "outputs": []
     },
-    "test": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"],
-      "env": ["NODE_ENV"]
-    },
-    "test:e2e": {
-      "dependsOn": ["^build"],
-      "cache": false
-    },
     "clean": {
       "cache": false
     },
-    "db:migrate": {
-      "cache": false,
-      "persistent": false
+    "generate": {
+      "cache": false
     },
-    "db:generate": {
-      "outputs": ["node_modules/.prisma/**", "generated/**"]
+    "migrate": {
+      "cache": false
+    },
+    "push": {
+      "cache": false
+    },
+    "studio": {
+      "cache": false,
+      "persistent": true
     }
   }
 }

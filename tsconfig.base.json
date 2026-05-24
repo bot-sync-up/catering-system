@@ -1,29 +1,24 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "preserve",
-    "allowJs": true,
+    "verbatimModuleSyntax": false,
     "incremental": true,
-    "baseUrl": ".",
-    "paths": {
-      "@catering/db": ["packages/db/src"],
-      "@catering/auth": ["packages/auth/src"],
-      "@catering/audit": ["packages/audit/src"],
-      "@catering/contracts": ["packages/contracts/src"],
-      "@catering/ui": ["packages/ui/src"],
-      "@catering/queue": ["packages/queue/src"],
-      "@catering/utils": ["packages/utils/src"]
-    }
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
   },
-  "exclude": ["node_modules", "dist", ".next", "build", "out"]
+  "exclude": ["node_modules", "dist", "build", ".next", ".turbo"]
 }

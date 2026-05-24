@@ -1,26 +1,30 @@
 {
-  "name": "@catering/mobile",
-  "version": "0.1.0",
+  "name": "@repo/mobile",
+  "version": "0.0.1",
   "private": true,
-  "description": "אפליקציית מובייל Expo (25)",
+  "main": "expo-router/entry",
   "scripts": {
-    "dev": "expo start --port 8081",
     "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "build": "eas build --platform all",
-    "submit": "eas submit",
-    "lint": "eslint .",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build": "expo export",
+    "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "clean": "rm -rf .expo node_modules"
   },
   "dependencies": {
-    "@catering/contracts": "workspace:*",
-    "@catering/utils": "workspace:*"
+    "@repo/utils": "workspace:*",
+    "@nozbe/watermelondb": "^0.27.1",
+    "expo": "~52.0.0",
+    "expo-router": "~4.0.0",
+    "expo-status-bar": "~2.0.0",
+    "react": "18.3.1",
+    "react-native": "0.76.1"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
-    "@types/node": "^22.10.0",
-    "vitest": "^2.1.8"
+    "@babel/core": "^7.25.0",
+    "@types/react": "~18.3.12",
+    "typescript": "^5.6.3"
   }
 }

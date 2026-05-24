@@ -1,14 +1,12 @@
-import { defineConfig } from "drizzle-kit";
+import type { Config } from 'drizzle-kit';
 
-export default defineConfig({
-  schema: "./src/schema.ts",
-  out: "./migrations",
-  dialect: "postgresql",
+export default {
+  schema: './src/schema/index.ts',
+  out: './drizzle',
+  dialect: 'postgresql',
   dbCredentials: {
-    url:
-      process.env.DATABASE_URL ??
-      "postgresql://aneh:aneh_dev_password@localhost:5432/aneh_hashoel",
+    url: process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/aneh',
   },
   strict: true,
   verbose: true,
-});
+} satisfies Config;

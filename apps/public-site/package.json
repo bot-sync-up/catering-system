@@ -1,27 +1,25 @@
 {
-  "name": "@catering/public-site",
-  "version": "0.1.0",
+  "name": "@repo/public-site",
+  "version": "0.0.1",
   "private": true,
-  "description": "אתר ציבורי / לידים (24)",
   "scripts": {
-    "dev": "next dev --port 3024",
+    "dev": "next dev -p 3002",
     "build": "next build",
-    "start": "next start --port 3024",
-    "lint": "eslint .",
+    "start": "next start -p 3002",
+    "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "clean": "rm -rf .next .turbo node_modules"
   },
   "dependencies": {
-    "@catering/db": "workspace:*",
-    "@catering/auth": "workspace:*",
-    "@catering/audit": "workspace:*",
-    "@catering/contracts": "workspace:*",
-    "@catering/ui": "workspace:*",
-    "@catering/utils": "workspace:*"
+    "@repo/api": "workspace:*",
+    "@repo/ui": "workspace:*",
+    "@repo/utils": "workspace:*",
+    "next": "15.0.2",
+    "react": "19.0.0-rc-02c0e824-20241028",
+    "react-dom": "19.0.0-rc-02c0e824-20241028"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
-    "@types/node": "^22.10.0",
-    "vitest": "^2.1.8"
+    "@types/react": "^18.3.12",
+    "typescript": "^5.6.3"
   }
 }

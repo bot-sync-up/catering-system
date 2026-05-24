@@ -1,3 +1,14 @@
-// Prisma schema, מודלים, מיגרציות (02 + משותף) - נקודת כניסה ראשית
-// TODO: מילוי בעת מיגרציה מ-worktree המקור
-export const PACKAGE_NAME = "db";
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from './schema';
+
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL is not defined');
+}
+
+const client = postgres(databaseUrl, { max: 10 });
+
+export const db = drizzle(client, { schema });
+export { schema };
+export type Database = typeof db;

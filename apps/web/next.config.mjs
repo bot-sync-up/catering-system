@@ -2,21 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    typedRoutes: true,
+    optimizePackageImports: ['@repo/ui', 'lucide-react'],
   },
-  transpilePackages: [
-    "@aneh/ui",
-    "@aneh/api",
-    "@aneh/db",
-    "@aneh/auth",
-    "@aneh/utils",
-  ],
-  i18n: undefined,
+  transpilePackages: ['@repo/ui', '@repo/api', '@repo/auth', '@repo/db', '@repo/utils'],
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "**",
+        protocol: 'https',
+        hostname: '**.r2.cloudflarestorage.com',
       },
     ],
   },
