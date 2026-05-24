@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# catering-backup — קיצור ל-backup-now.sh
+source "$(dirname "$0")/_common.sh"
+
+APP_DIR="$(find_app_dir)"
+SCRIPT="$APP_DIR/release-bundle/backup-now.sh"
+
+[ -f "$SCRIPT" ] || { err "לא נמצא: $SCRIPT"; exit 1; }
+exec bash "$SCRIPT" "$@"
