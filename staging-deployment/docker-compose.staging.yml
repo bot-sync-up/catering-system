@@ -1,0 +1,77 @@
+version: "3.9"
+
+###############################################################################
+# docker-compose.staging.yml
+# מופעל על ה-VPS. ה-images נמשכים מ-ghcr.io לפי משתנה $TAG.
+###############################################################################
+
+x-common: &common
+  restart: unless-stopped
+  env_file: ./.env
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
+services:
+  api:
+    <<: *common
+    image: ghcr.io/catering/api:${TAG:-staging}
+    container_name: staging-api
+    ports:
+      - "127.0.0.1:4000:4000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [staging_net]
+
+  portal:
+    <<: *common
+    image: ghcr.io/catering/portal:${TAG:-staging}
+    container_name: staging-portal
+    ports:
+      - "127.0.0.1:3100:3000"
+    depends_on: [api]
+    networks: [staging_net]
+
+  admin:
+    <<: *common
+    image: ghcr.io/catering/admin:${TAG:-staging}
+    container_name: staging-admin
+    ports:
+      - "127.0.0.1:3200:3000"
+    depends_on: [api]
+    networks: [staging_net]
+
+  worker:
+    <<: *common
+    image: ghcr.io/catering/worker:${TAG:-staging}
+    container_name: staging-worker
+    depends_on: [api]
+    networks: [staging_net]
+
+  frontend:
+    <<: *common
+    image: ghcr.io/catering/frontend:${TAG:-staging}
+    container_name: staging-frontend
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on: [api]
+    networks: [staging_net]
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.1.0
+    container_name: staging-nginx-exporter
+    restart: unless-stopped
+    command:
+      - "-nginx.scrape-uri=http://host.docker.internal:80/stub_status"
+    ports:
+      - "127.0.0.1:9113:9113"
+    networks: [staging_net]
+
+networks:
+  staging_net:
+    external: true

@@ -1,0 +1,77 @@
+---
+- name: התקנת תלויות עבור Docker
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: yes
+
+- name: יצירת תיקיית keyrings
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: הוספת מפתח GPG של Docker
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    keyring: /etc/apt/keyrings/docker.gpg
+    state: present
+
+- name: הוספת repo של Docker
+  apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+    filename: docker
+    update_cache: yes
+
+- name: התקנת Docker Engine + plugins
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: הוספת המשתמש לקבוצת docker
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: ודא שירות Docker פועל
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: יצירת רשת docker חיצונית ל-staging
+  community.docker.docker_network:
+    name: staging_net
+    driver: bridge
+    state: present
+  become_user: "{{ ansible_user }}"
+
+- name: הגדרת log rotation ל-Docker
+  copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "20m",
+          "max-file": "5"
+        },
+        "live-restore": true,
+        "userland-proxy": false,
+        "metrics-addr": "127.0.0.1:9323",
+        "experimental": true
+      }
+    mode: "0644"
+  notify: restart docker

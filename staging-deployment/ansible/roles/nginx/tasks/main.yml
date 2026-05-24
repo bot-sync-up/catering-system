@@ -1,0 +1,79 @@
+---
+- name: התקנת nginx + certbot
+  apt:
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+    state: present
+
+- name: מחיקת default site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx
+
+- name: יצירת תיקיית acme challenge
+  file:
+    path: /var/www/acme
+    state: directory
+    owner: "{{ nginx_user }}"
+    group: "{{ nginx_user }}"
+    mode: "0755"
+
+- name: הזרמת nginx conf לכל הדומיינים
+  template:
+    src: staging.conf.j2
+    dest: "/etc/nginx/sites-available/staging.conf"
+    mode: "0644"
+  notify: reload nginx
+
+- name: הפעלת site
+  file:
+    src: /etc/nginx/sites-available/staging.conf
+    dest: /etc/nginx/sites-enabled/staging.conf
+    state: link
+  notify: reload nginx
+
+- name: ודא ש-nginx פעיל
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: יצירת אישורי Let's Encrypt לכל הדומיינים
+  command: >
+    certbot --nginx --non-interactive --agree-tos
+    --email {{ acme_email }}
+    {% for d in domains %}-d {{ d }} {% endfor %}
+    --redirect --hsts --staple-ocsp
+  args:
+    creates: "/etc/letsencrypt/live/{{ domains[0] }}/fullchain.pem"
+  register: certbot_result
+  changed_when: "'Successfully received certificate' in (certbot_result.stdout | default(''))"
+
+- name: cron לחידוש tlsl
+  cron:
+    name: certbot renewal
+    job: "certbot renew --quiet --no-self-upgrade && systemctl reload nginx"
+    minute: "30"
+    hour: "3"
+
+- name: הגדרת logrotate ל-nginx
+  copy:
+    dest: /etc/logrotate.d/nginx-staging
+    content: |
+      /var/log/nginx/*.log {
+          daily
+          missingok
+          rotate 14
+          compress
+          delaycompress
+          notifempty
+          create 0640 www-data adm
+          sharedscripts
+          postrotate
+              [ -f /var/run/nginx.pid ] && kill -USR1 `cat /var/run/nginx.pid`
+          endscript
+      }
+    mode: "0644"

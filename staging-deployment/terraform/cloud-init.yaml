@@ -1,0 +1,59 @@
+#cloud-config
+hostname: ${hostname}
+preserve_hostname: false
+manage_etc_hosts: true
+
+users:
+  - name: ${admin_user}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: sudo, docker
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_pub_key}
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - wget
+  - gnupg
+  - ca-certificates
+  - lsb-release
+  - apt-transport-https
+  - software-properties-common
+  - python3
+  - python3-pip
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/99-staging.conf
+    content: |
+      PasswordAuthentication no
+      PermitRootLogin no
+      ChallengeResponseAuthentication no
+      UsePAM yes
+      X11Forwarding no
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+  - path: /etc/sysctl.d/99-staging.conf
+    content: |
+      net.ipv4.tcp_syncookies=1
+      net.ipv4.conf.all.rp_filter=1
+      net.ipv4.conf.default.rp_filter=1
+      net.ipv6.conf.all.disable_ipv6=0
+
+runcmd:
+  - systemctl restart sshd
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
+  - systemctl enable --now fail2ban
+  - sysctl --system
+
+final_message: "staging node $${hostname} ready after $UPTIME seconds"

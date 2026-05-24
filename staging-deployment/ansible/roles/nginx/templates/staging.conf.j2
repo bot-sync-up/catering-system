@@ -1,0 +1,143 @@
+###############################################################################
+# Staging nginx configuration (Ansible template)
+###############################################################################
+
+# קצב גלובלי
+limit_req_zone $binary_remote_addr zone=staging_api:10m rate=20r/s;
+limit_conn_zone $binary_remote_addr zone=staging_conn:10m;
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# ACME (HTTP) - יפנה את certbot
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {% for d in domains %}{{ d }} {% endfor %};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/acme;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# Frontend (staging.catering.co.il)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name staging.catering.co.il;
+
+    ssl_certificate /etc/letsencrypt/live/staging.catering.co.il/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/staging.catering.co.il/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" always;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+
+# API (api.staging.catering.co.il)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name api.staging.catering.co.il;
+
+    ssl_certificate /etc/letsencrypt/live/staging.catering.co.il/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/staging.catering.co.il/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+
+    limit_req zone=staging_api burst=50 nodelay;
+    limit_conn staging_conn 30;
+
+    location / {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 90s;
+    }
+
+    location /ws {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+    }
+}
+
+# Portal (portal.staging.catering.co.il)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name portal.staging.catering.co.il;
+
+    ssl_certificate /etc/letsencrypt/live/staging.catering.co.il/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/staging.catering.co.il/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+
+# Admin (admin.staging.catering.co.il)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name admin.staging.catering.co.il;
+
+    ssl_certificate /etc/letsencrypt/live/staging.catering.co.il/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/staging.catering.co.il/privkey.pem;
+
+    # admin רגיש - הגנת IP allow-list
+    allow 0.0.0.0/0;          # החליפו ל-IP חברה / VPN
+    # deny all;
+
+    location / {
+        proxy_pass http://127.0.0.1:3200;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+
+# Grafana
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name grafana.staging.catering.co.il;
+
+    ssl_certificate /etc/letsencrypt/live/staging.catering.co.il/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/staging.catering.co.il/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3300;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}

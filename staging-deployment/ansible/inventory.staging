@@ -1,0 +1,16 @@
+###############################################################################
+# Ansible inventory - staging
+# ניתן ליצור אוטומטית מ-`terraform output -raw ansible_inventory > inventory.staging`
+###############################################################################
+
+[staging_app]
+app-1 ansible_host=CHANGE_ME_IP_HERE ansible_user=deploy
+
+[staging_app:vars]
+ansible_python_interpreter=/usr/bin/python3
+env=staging
+ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new'
+
+[all:vars]
+domain=staging.catering.co.il
+acme_email=ops@catering.co.il

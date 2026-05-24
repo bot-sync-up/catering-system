@@ -1,0 +1,53 @@
+###############################################################################
+# Grafana datasource provisioning - staging
+###############################################################################
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus-Staging
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: "15s"
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+
+  - name: Loki-Staging
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      maxLines: 1000
+      timeout: 60
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: "trace_id=(\\w+)"
+          name: TraceID
+          url: "$${__value.raw}"
+
+  - name: Tempo-Staging
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+
+  - name: Postgres-Staging
+    type: postgres
+    access: proxy
+    url: $POSTGRES_HOST:5432
+    user: $POSTGRES_USER
+    secureJsonData:
+      password: $POSTGRES_PASSWORD
+    jsonData:
+      database: app_staging
+      sslmode: require
+      postgresVersion: 1600
+      maxOpenConns: 10
+      timescaledb: false
