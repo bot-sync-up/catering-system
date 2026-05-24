@@ -1,0 +1,41 @@
+# הרצת status page — מבוסס Cachet (או Statping כתחליף).
+# בפועל אנחנו מציעים Statping כי אקטיבי יותר ב-2025+.
+
+version: "3.9"
+
+services:
+  statping:
+    image: adamboutcher/statping-ng:latest
+    container_name: status-page
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DB_CONN: sqlite
+      NAME: "syncup status"
+      DESCRIPTION: "סטטוס מערכת syncup"
+      DOMAIN: "https://status.syncup.co.il"
+      ADMIN_EMAIL: "ops@syncup.co.il"
+      LANGUAGE: "he"
+    volumes:
+      - statping_data:/app
+      - ./config.yml:/app/config.yml:ro
+
+  # סקריפט סינכרון בין Prometheus ל-Statping (כתוב ב-Node)
+  sync:
+    image: node:22-alpine
+    container_name: status-sync
+    restart: unless-stopped
+    depends_on:
+      - statping
+    environment:
+      PROMETHEUS_URL: http://prometheus:9090
+      STATPING_URL: http://statping:8080
+      STATPING_API_KEY: "${STATPING_API_KEY}"
+      POLL_INTERVAL: "60"
+    volumes:
+      - ./sync.js:/app/sync.js:ro
+    command: ["node", "/app/sync.js"]
+
+volumes:
+  statping_data:

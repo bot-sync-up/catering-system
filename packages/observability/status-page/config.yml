@@ -1,0 +1,133 @@
+# Status Page — תצורה מסוג Cachet
+#
+# כל "רכיב" הוא שירות נצפה. הסטטוס מחושב מ-Prometheus:
+#   - up{job="$component"} == 1     → operational
+#   - up == 0                       → major outage
+#   - p95 latency > 2x baseline     → degraded performance
+#   - 5xx rate > 5%                 → partial outage
+
+site:
+  title: "syncup status"
+  url: "https://status.syncup.co.il"
+  description: "סטטוס מערכת ל-syncup — עדכונים בזמן אמת"
+  timezone: "Asia/Jerusalem"
+  language: "he"
+  rtl: true
+
+contact:
+  support_email: "support@syncup.co.il"
+  twitter: "@syncup_status"
+
+# רכיבים — קבוצות לוגיות + פריטים
+component_groups:
+  - name: "API שירותים"
+    order: 1
+    components:
+      - name: "API ראשי"
+        slug: "api-main"
+        prometheus_job: "api"
+        endpoint_check: "https://api.syncup.co.il/health"
+
+      - name: "Webhooks"
+        slug: "webhooks"
+        prometheus_job: "webhooks"
+        endpoint_check: "https://hooks.syncup.co.il/health"
+
+  - name: "תשלומים"
+    order: 2
+    components:
+      - name: "תשלומים — Stripe"
+        slug: "payments-stripe"
+        prometheus_query: |
+          sum(rate(payment_attempts_total{provider="stripe",result="success"}[5m]))
+          / sum(rate(payment_attempts_total{provider="stripe"}[5m]))
+        thresholds:
+          operational: 0.95
+          degraded: 0.85
+          outage: 0.50
+
+      - name: "תשלומים — iCount"
+        slug: "payments-icount"
+        prometheus_query: |
+          sum(rate(payment_attempts_total{provider="icount",result="success"}[5m]))
+          / sum(rate(payment_attempts_total{provider="icount"}[5m]))
+        thresholds:
+          operational: 0.95
+          degraded: 0.85
+          outage: 0.50
+
+  - name: "עיבוד מסמכים"
+    order: 3
+    components:
+      - name: "OCR pipeline"
+        slug: "ocr"
+        prometheus_job: "ocr-worker"
+
+      - name: "התראות SMS/Email"
+        slug: "notifications"
+        prometheus_job: "notifications"
+
+  - name: "תשתית"
+    order: 4
+    components:
+      - name: "מסד נתונים"
+        slug: "database"
+        prometheus_query: "pg_up == 1"
+
+      - name: "Redis / תורים"
+        slug: "redis"
+        prometheus_query: "redis_up == 1"
+
+# הגדרת רמות סטטוס
+status_levels:
+  - id: 1
+    name: "operational"
+    label: "פועל תקין"
+    color: "#28a745"
+  - id: 2
+    name: "performance_issues"
+    label: "ביצועים מעט פחות"
+    color: "#ffc107"
+  - id: 3
+    name: "partial_outage"
+    label: "תקלה חלקית"
+    color: "#fd7e14"
+  - id: 4
+    name: "major_outage"
+    label: "תקלה משמעותית"
+    color: "#dc3545"
+
+# subscriptions — מי מקבל עדכונים
+subscriptions:
+  email_enabled: true
+  webhook_enabled: true
+  rss_enabled: true
+
+# בדיקות שמורצות כל דקה
+poll_interval_seconds: 60
+
+# Prometheus — איפה לשאוב נתונים
+prometheus:
+  url: "http://prometheus:9090"
+  timeout_ms: 5000
+
+# Incidents — תצורת תקשורת
+incidents:
+  templates:
+    - name: "investigating"
+      title: "אנחנו בודקים את העניין"
+      body: "צוות ההנדסה זוהה את הבעיה ועובד על פתרון."
+    - name: "identified"
+      title: "הבעיה זוהתה"
+      body: "אנו מטפלים בה ונעדכן בהתקדמות."
+    - name: "monitoring"
+      title: "תיקון בייצור"
+      body: "ההשפעה הוקטנה, אנו עוקבים אחר היציבות."
+    - name: "resolved"
+      title: "נפתר"
+      body: "המערכת חזרה לפעולה תקינה. תודה על הסבלנות."
+
+# שמירת היסטוריה
+retention:
+  uptime_days: 90
+  incidents_days: 365

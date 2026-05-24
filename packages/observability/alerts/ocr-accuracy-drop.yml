@@ -1,0 +1,36 @@
+# OCR accuracy ירד מתחת ל-90% למשך שעה — אימייל
+#
+# OCR accuracy נמדד כ-gauge על דוגמאות שמסומנות ידנית.
+# ירידה מתמשכת = מודל התדרדר או סוג מסמך חדש.
+
+groups:
+  - name: ocr_accuracy
+    interval: 5m
+    rules:
+      - alert: OcrAccuracyLow
+        expr: avg_over_time(ocr_accuracy[1h]) < 0.90
+        for: 1h
+        labels:
+          severity: warning
+          team: ml
+          notify: email
+        annotations:
+          summary: "דיוק OCR ירד מתחת ל-90% בשעה האחרונה"
+          description: |
+            avg(ocr_accuracy) = {{ $value | humanizePercentage }}
+            סוג מסמך: {{ $labels.document_type }}
+            מודל: {{ $labels.model }}
+            פעולה: בדוק מדגם, שקול retraining או fallback למודל קודם.
+          runbook_url: "https://wiki.syncup.co.il/runbooks/ocr-degradation"
+
+      - alert: OcrConfidenceLow
+        expr: |
+          histogram_quantile(0.5, sum(rate(ocr_confidence_bucket[15m])) by (le, document_type)) < 0.80
+        for: 30m
+        labels:
+          severity: info
+          team: ml
+          notify: email
+        annotations:
+          summary: "p50 confidence של OCR מתחת ל-0.80"
+          description: "מסמכי {{ $labels.document_type }} מציגים confidence נמוך."

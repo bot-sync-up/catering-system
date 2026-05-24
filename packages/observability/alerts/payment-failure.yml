@@ -1,0 +1,50 @@
+# Payment success rate ירד מתחת ל-95% למשך 5 דקות — PagerDuty
+#
+# חישוב: rate על מונה payment_attempts_total, חלוקה לפי result.
+# סף: מתחת ל-0.95 = חצי דקה של אזעקה לפני page.
+# ערוץ: PagerDuty — זה כסף, מעירים בלילה.
+
+groups:
+  - name: payment_failure
+    interval: 30s
+    rules:
+      - alert: PaymentSuccessRateLow
+        expr: |
+          (
+            sum(rate(payment_attempts_total{result="success"}[5m]))
+            /
+            sum(rate(payment_attempts_total[5m]))
+          ) < 0.95
+        for: 5m
+        labels:
+          severity: critical
+          team: payments
+          page: pagerduty
+        annotations:
+          summary: "אחוז הצלחת תשלום נמוך מ-95% ב-5 דקות אחרונות"
+          description: |
+            payment_success_rate = {{ $value | humanizePercentage }}
+            סף: 95%
+            השפעה: לקוחות לא מצליחים לשלם.
+            בדוק: /dashboards/business, סטטוס ספק (Stripe/iCount/PayPlus).
+          runbook_url: "https://wiki.syncup.co.il/runbooks/payment-failure"
+          dashboard_url: "https://grafana.syncup.co.il/d/business"
+
+      - alert: PaymentSuccessRateCritical
+        expr: |
+          (
+            sum(rate(payment_attempts_total{result="success"}[5m]))
+            /
+            sum(rate(payment_attempts_total[5m]))
+          ) < 0.80
+        for: 2m
+        labels:
+          severity: critical
+          team: payments
+          page: pagerduty
+          escalate: cto
+        annotations:
+          summary: "תשלומים קורסים: <80% הצלחה"
+          description: |
+            אזעקת חירום. הצלחות = {{ $value | humanizePercentage }}.
+            בדוק מיידית סטטוס ספק תשלומים.
