@@ -1,17 +1,45 @@
 {
-  "name": "@catering/audit",
-  "version": "0.1.0",
+  "name": "audit-log-system",
+  "version": "1.0.0",
+  "description": "Append-only audit log for 'Aneh et HaShoel' platform — tracks all changes, logins, and sensitive data access for 7 years",
   "private": true,
-  "description": "Audit log + event sourcing (04)",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
   "scripts": {
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "build": "tsc",
+    "dev": "ts-node-dev --respawn src/server.ts",
+    "start": "node dist/server.js",
+    "migrate": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "generate": "prisma generate",
+    "test": "jest",
+    "lint": "eslint . --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "csv-stringify": "^6.5.2",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "pdfkit": "^0.15.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
-    "vitest": "^2.1.8"
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.14",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.9.0",
+    "@types/pdfkit": "^0.13.5",
+    "jest": "^29.7.0",
+    "prisma": "^5.22.0",
+    "ts-jest": "^29.2.5",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

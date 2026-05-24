@@ -35,6 +35,27 @@ function hashPassword(plain: string): string {
   return crypto.createHash("sha256").update(plain).digest("hex");
 }
 
+async function seedTenant() {
+  console.log("יצירת/עדכון דייר ראשי...");
+  await prisma.tenant.upsert({
+    where: { id: TENANT_ID },
+    create: {
+      id: TENANT_ID,
+      slug: "aneh-hashoel-demo",
+      name: "Aneh et HaShoel Demo",
+      hebrewName: "ענה את השואל — דמו",
+      domain: "demo.aneh-hashoel.co.il",
+      timezone: "Asia/Jerusalem",
+      locale: "he-IL",
+      currency: "ILS",
+      vatRate: 18,
+      settings: { dir: "rtl", weekStart: 0 },
+      active: true,
+    },
+    update: {},
+  });
+}
+
 async function clearDb() {
   console.log("ניקוי הנתונים הקיימים...");
   // מחיקה לפי סדר תלות הפוך
@@ -207,7 +228,31 @@ async function seedUsers() {
   if (managerRole) await prisma.userRole.create({ data: { userId: manager.id, roleId: managerRole.id, tenantId: TENANT_ID } });
   if (chefRole) await prisma.userRole.create({ data: { userId: chef.id, roleId: chefRole.id, tenantId: TENANT_ID } });
 
-  return { admin, manager, chef };
+  // 2 משתמשים נוספים — סך הכל 5
+  const accountant = await prisma.user.create({
+    data: {
+      tenantId: TENANT_ID,
+      email: "accountant@aneh-hashoel.co.il",
+      phone: "050-4444444",
+      passwordHash: hashPassword("Account123!"),
+      firstName: "רבקה",
+      lastName: "פרידמן",
+      status: UserStatus.ACTIVE,
+    },
+  });
+  const sales = await prisma.user.create({
+    data: {
+      tenantId: TENANT_ID,
+      email: "sales@aneh-hashoel.co.il",
+      phone: "050-5555555",
+      passwordHash: hashPassword("Sales1234!"),
+      firstName: "יוסף",
+      lastName: "אברהם",
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  return { admin, manager, chef, accountant, sales };
 }
 
 async function seedCustomers() {
@@ -296,6 +341,29 @@ async function seedCustomers() {
 
   await prisma.customerTag.create({ data: { customerId: customers[0].id, tagId: vipTag.id, tenantId: TENANT_ID } });
   await prisma.customerTag.create({ data: { customerId: customers[1].id, tagId: corpTag.id, tenantId: TENANT_ID } });
+
+  // 7 לקוחות נוספים — סך הכל 10
+  const extraNames: { name: string; type: CustomerType; phone: string }[] = [
+    { name: "משפחת כהן", type: CustomerType.INDIVIDUAL, phone: "052-7000001" },
+    { name: "משפחת לוי", type: CustomerType.INDIVIDUAL, phone: "052-7000002" },
+    { name: "ישיבת אור החיים", type: CustomerType.ORGANIZATION, phone: "02-7000003" },
+    { name: 'מסעדת הכשר בע"מ', type: CustomerType.BUSINESS, phone: "03-7000004" },
+    { name: "עיריית בני ברק", type: CustomerType.GOVERNMENT, phone: "03-7000005" },
+    { name: "משפחת מזרחי", type: CustomerType.INDIVIDUAL, phone: "052-7000006" },
+    { name: "מרכז קהילתי רמת גן", type: CustomerType.ORGANIZATION, phone: "03-7000007" },
+  ];
+  for (const c of extraNames) {
+    const created = await prisma.customer.create({
+      data: {
+        tenantId: TENANT_ID,
+        type: c.type,
+        name: c.name,
+        hebrewName: c.name,
+        phone: c.phone,
+      },
+    });
+    customers.push(created);
+  }
 
   return customers;
 }
@@ -665,6 +733,96 @@ async function seedEvent(opts: {
   return event;
 }
 
+async function seedAdditionalEventsAndOrders(opts: {
+  customers: { id: string }[];
+  venueId: string;
+  menuId: string;
+  recipeId: string;
+  managerId: string;
+}) {
+  console.log("יצירת 4 אירועים נוספים ו-20 הזמנות סך הכל...");
+  const eventTemplates: { type: EventType; title: string; status: EventStatus; guests: number; base: number }[] = [
+    { type: EventType.BAR_MITZVAH, title: "בר מצווה - משפחת כהן", status: EventStatus.CONFIRMED, guests: 150, base: 33000 },
+    { type: EventType.BAT_MITZVAH, title: "בת מצווה - משפחת לוי", status: EventStatus.DRAFT, guests: 120, base: 24000 },
+    { type: EventType.BRIT_MILAH, title: 'ברית מילה - משפחת מזרחי', status: EventStatus.COMPLETED, guests: 80, base: 14400 },
+    { type: EventType.CORPORATE, title: 'כנס שנתי - חברת הייטק בע"מ', status: EventStatus.CONFIRMED, guests: 200, base: 50000 },
+  ];
+
+  const events: { id: string }[] = [];
+  for (let i = 0; i < eventTemplates.length; i++) {
+    const t = eventTemplates[i];
+    const customer = opts.customers[(i + 1) % opts.customers.length];
+    const startsAt = new Date();
+    startsAt.setDate(startsAt.getDate() + 21 + i * 7);
+    startsAt.setHours(18, 30, 0, 0);
+    const endsAt = new Date(startsAt);
+    endsAt.setHours(23, 30, 0, 0);
+    const ev = await prisma.event.create({
+      data: {
+        tenantId: TENANT_ID,
+        customerId: customer.id,
+        venueId: opts.venueId,
+        menuId: opts.menuId,
+        type: t.type,
+        status: t.status,
+        title: t.title,
+        description: `${t.title} — ${t.guests} מוזמנים`,
+        startsAt,
+        endsAt,
+        guestCount: t.guests,
+        basePrice: t.base,
+        discount: 0,
+        totalPrice: t.base,
+        paidAmount: t.status === EventStatus.COMPLETED ? t.base : Math.floor(t.base / 3),
+      },
+    });
+    events.push(ev);
+  }
+
+  // 20 הזמנות (orderItems) - מפוזרות בין 5 האירועים (הראשון + 4 חדשים)
+  // נחשיב את האירוע הראשון כבר עם 1 הזמנה => נוסיף 19 כאן.
+  const dishNames = [
+    "סלט ירוק קלאסי",
+    "סלט סלק וגבינת עזים",
+    "קרפצ'יו דג",
+    "המבורגר ביתי",
+    "פילה בקר ברוטב יין",
+    "חזה עוף ממולא",
+    "סלמון אפוי",
+    "ניוקי תרד",
+    "אורז ירקות",
+    "פירה ביתי",
+    "ירקות צלויים",
+    "פטריות מוקרמות",
+    "קינוח שוקולד",
+    "פאי תפוחים",
+    "מוס לימון",
+    "פירות העונה",
+    "מרק קרם",
+    "חמין שבת",
+    "קוסקוס מרוקאי",
+  ];
+
+  for (let i = 0; i < dishNames.length; i++) {
+    const ev = events[i % events.length];
+    const qty = 50 + (i % 7) * 20;
+    const unit = 25 + (i % 11) * 5;
+    await prisma.orderItem.create({
+      data: {
+        tenantId: TENANT_ID,
+        eventId: ev.id,
+        recipeId: opts.recipeId,
+        name: dishNames[i],
+        quantity: qty,
+        unitPrice: unit,
+        totalPrice: qty * unit,
+      },
+    });
+  }
+
+  return events;
+}
+
 async function seedFinance(opts: {
   customerId: string;
   eventId: string;
@@ -850,6 +1008,7 @@ async function seedPlatform() {
 async function main() {
   console.log("=== התחלת זריעת נתונים לפלטפורמת 'ענה את השואל' ===");
   await clearDb();
+  await seedTenant();
   await seedRolesAndPermissions();
   const users = await seedUsers();
   const customers = await seedCustomers();
@@ -870,6 +1029,13 @@ async function main() {
   });
 
   await seedFinance({ customerId: customers[0].id, eventId: event.id });
+  await seedAdditionalEventsAndOrders({
+    customers,
+    venueId: venues[0].id,
+    menuId: menu.id,
+    recipeId: recipe.id,
+    managerId: users.manager.id,
+  });
   const vehicle = await seedFleet();
 
   // משלוח

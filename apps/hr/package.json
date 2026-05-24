@@ -1,27 +1,20 @@
 {
-  "name": "@catering/hr",
-  "version": "0.1.0",
+  "name": "hr-shifts-platform",
+  "version": "1.0.0",
   "private": true,
-  "description": "ניהול עובדים HR (15)",
+  "description": "פלטפורמת HR – תיק עובד ומשמרות (RTL עברית)",
+  "workspaces": [
+    "server",
+    "client"
+  ],
   "scripts": {
-    "dev": "next dev --port 3015",
-    "build": "next build",
-    "start": "next start --port 3015",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
-  },
-  "dependencies": {
-    "@catering/db": "workspace:*",
-    "@catering/auth": "workspace:*",
-    "@catering/audit": "workspace:*",
-    "@catering/contracts": "workspace:*",
-    "@catering/ui": "workspace:*",
-    "@catering/utils": "workspace:*"
+    "dev": "concurrently -n server,client -c green,cyan \"npm --workspace server run dev\" \"npm --workspace client run dev\"",
+    "build": "npm --workspace server run build && npm --workspace client run build",
+    "start": "npm --workspace server run start",
+    "db:migrate": "npm --workspace server run db:migrate",
+    "db:seed": "npm --workspace server run db:seed"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
-    "@types/node": "^22.10.0",
-    "vitest": "^2.1.8"
+    "concurrently": "^9.0.0"
   }
 }

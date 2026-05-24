@@ -1,31 +1,21 @@
-import { SignJWT, jwtVerify } from "jose";
-import { z } from "zod";
-
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? "dev_secret_replace_me",
-);
-
-export const sessionSchema = z.object({
-  userId: z.string().uuid(),
-  role: z.enum(["asker", "rabbi", "editor", "admin"]),
-  email: z.string().email(),
-});
-
-export type Session = z.infer<typeof sessionSchema>;
-
-export async function signSession(session: Session): Promise<string> {
-  return new SignJWT({ ...session })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(process.env.JWT_EXPIRES_IN ?? "7d")
-    .sign(secret);
-}
-
-export async function verifySession(token: string): Promise<Session | null> {
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    return sessionSchema.parse(payload);
-  } catch {
-    return null;
-  }
-}
+/**
+ * @aneh/auth — public surface
+ */
+export * from './types';
+export * from './config';
+export * from './crypto/password';
+export * from './crypto/aes';
+export * from './crypto/tokens';
+export * from './rbac/roles';
+export * from './policy/engine';
+export * from './session/store';
+export * from './2fa/totp';
+export * from './2fa/sms';
+export * from './db/repository';
+export * from './middleware/authenticate';
+export * from './middleware/authorize';
+export * from './middleware/rateLimit';
+export * from './middleware/securityHeaders';
+export * from './oauth/providers';
+export * from './services/authService';
+export * from './routes/authRoutes';

@@ -1,32 +1,41 @@
 {
-  "name": "kitchen-recipes",
-  "version": "0.1.0",
+  "name": "catering-monorepo",
+  "version": "1.0.0",
   "private": true,
+  "description": "Catering & business operations monorepo - 9 worktrees unified (INT1-5 + Sealing 2-5)",
   "scripts": {
-    "dev": "next dev -p 3000",
-    "build": "next build",
-    "start": "next start -p 3000",
-    "lint": "next lint",
-    "db:push": "prisma db push",
-    "db:generate": "prisma generate",
-    "db:seed": "node scripts/seed.js"
-  },
-  "dependencies": {
-    "@prisma/client": "^5.22.0",
-    "next": "14.2.15",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "diff": "^7.0.0",
-    "date-fns": "^4.1.0"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rimraf node_modules",
+    "db:migrate": "pnpm --filter @catering/db migrate",
+    "db:generate": "pnpm --filter @catering/db generate",
+    "db:seed": "pnpm --filter @catering/db seed",
+    "orchestrator:dev": "pnpm --filter @catering/orchestrator dev",
+    "orchestrator:test": "pnpm --filter @catering/orchestrator test",
+    "docker:up": "docker compose -f deployment/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f deployment/docker/docker-compose.yml down",
+    "k8s:apply": "kubectl apply -f production-pack/k8s/",
+    "loadtest:smoke": "pnpm --dir production-pack/load-tests test:smoke"
   },
   "devDependencies": {
-    "@types/node": "^22.7.4",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.0",
-    "prisma": "^5.22.0",
-    "typescript": "^5.6.2",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13"
+    "turbo": "^2.3.3",
+    "typescript": "^5.6.3",
+    "@types/node": "^22.10.0",
+    "prettier": "^3.4.0",
+    "eslint": "^9.16.0",
+    "rimraf": "^6.0.1",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {}
   }
 }

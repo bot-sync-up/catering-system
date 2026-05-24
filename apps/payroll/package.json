@@ -1,27 +1,19 @@
 {
-  "name": "@catering/payroll",
-  "version": "0.1.0",
-  "private": true,
-  "description": "שכר ותלושים (16)",
+  "name": "payroll-system",
+  "version": "1.0.0",
+  "description": "Israeli Payroll System - מערכת חישוב שכר ישראלית",
+  "main": "src/api/server.js",
+  "type": "commonjs",
   "scripts": {
-    "dev": "next dev --port 3016",
-    "build": "next build",
-    "start": "next start --port 3016",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "start": "node src/api/server.js",
+    "test": "node tests/run-tests.js",
+    "demo": "node src/demo.js"
   },
   "dependencies": {
-    "@catering/db": "workspace:*",
-    "@catering/auth": "workspace:*",
-    "@catering/audit": "workspace:*",
-    "@catering/contracts": "workspace:*",
-    "@catering/ui": "workspace:*",
-    "@catering/utils": "workspace:*"
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "pdfkit": "^0.15.0"
   },
-  "devDependencies": {
-    "typescript": "^5.6.3",
-    "@types/node": "^22.10.0",
-    "vitest": "^2.1.8"
-  }
+  "author": "bot-sync-up",
+  "license": "MIT"
 }

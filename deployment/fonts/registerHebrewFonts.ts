@@ -1,44 +1,85 @@
 /**
- * registerHebrewFonts.ts
+ * Registers Hebrew fonts with PDFKit for proper RTL rendering.
  *
- * Helper for pdfkit / @react-pdf/renderer / pdf-lib that loads Heebo + Frank Ruhl Libre
- * and configures RTL-friendly defaults.
+ * NOTE: TTF files are NOT committed to the repo (disk-saving).
+ * The build pipeline / runtime must download them on first use, or mount
+ * them from a shared volume. Set FONT_DIR env var to override.
  *
- * Usage (pdfkit):
- *   import PDFDocument from "pdfkit";
- *   import { registerHebrewFonts } from "@platform/fonts";
- *   const doc = new PDFDocument({ lang: "he" });
- *   registerHebrewFonts(doc);
- *   doc.font("Heebo").text("שלום עולם", { features: ["rtla"], align: "right" });
+ * Expected font files (place under FONT_DIR):
+ *   - OpenSansHebrew-Regular.ttf
+ *   - OpenSansHebrew-Bold.ttf
+ *   - OpenSansHebrew-Italic.ttf
+ *   - DavidLibre-Regular.ttf      (for halachic/religious text)
+ *   - DavidLibre-Bold.ttf
+ *   - FrankRuhlLibre-Regular.ttf  (newspaper style)
  */
-import path from "node:path";
-import fs from "node:fs";
-import type PDFKit from "pdfkit";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import type PDFDocument from "pdfkit";
 
-const FONT_DIR = process.env.FONT_DIR ?? path.resolve(__dirname, "files");
-
-const FILES = {
-  "Heebo":              "Heebo-Regular.ttf",
-  "Heebo-Bold":         "Heebo-Bold.ttf",
-  "FrankRuhlLibre":     "FrankRuhlLibre-Regular.ttf",
-  "FrankRuhlLibre-Bold":"FrankRuhlLibre-Bold.ttf",
-} as const;
-
-export function registerHebrewFonts(doc: PDFKit.PDFDocument): void {
-  for (const [name, file] of Object.entries(FILES)) {
-    const p = path.join(FONT_DIR, file);
-    if (!fs.existsSync(p)) {
-      throw new Error(`Missing Hebrew font: ${p}. Run deployment/fonts/install.sh`);
-    }
-    doc.registerFont(name, p);
-  }
-  // RTL defaults
-  (doc as any).options.bidi = true;
-  doc.font("Heebo");
+export interface FontEntry {
+  alias: string;
+  filename: string;
+  fallback?: string;
 }
 
-// Convenience for @react-pdf/renderer
-export const REACT_PDF_FONTS = Object.entries(FILES).map(([family, file]) => ({
-  family,
-  src: path.join(FONT_DIR, file),
-}));
+export const HEBREW_FONTS: FontEntry[] = [
+  { alias: "Hebrew",         filename: "OpenSansHebrew-Regular.ttf" },
+  { alias: "Hebrew-Bold",    filename: "OpenSansHebrew-Bold.ttf" },
+  { alias: "Hebrew-Italic",  filename: "OpenSansHebrew-Italic.ttf" },
+  { alias: "Hebrew-Serif",   filename: "DavidLibre-Regular.ttf",     fallback: "Hebrew" },
+  { alias: "Hebrew-Serif-B", filename: "DavidLibre-Bold.ttf",        fallback: "Hebrew-Bold" },
+  { alias: "Hebrew-News",    filename: "FrankRuhlLibre-Regular.ttf", fallback: "Hebrew-Serif" },
+];
+
+export interface RegisterOptions {
+  /** directory containing the .ttf files (defaults to env FONT_DIR or ./fonts) */
+  fontDir?: string;
+  /** throw on missing font file; default: warn and skip */
+  strict?: boolean;
+}
+
+export function registerHebrewFonts(
+  doc: PDFKit.PDFDocument,
+  opts: RegisterOptions = {}
+): { registered: string[]; missing: string[] } {
+  const fontDir = opts.fontDir ?? process.env.FONT_DIR ?? join(process.cwd(), "fonts");
+  const registered: string[] = [];
+  const missing: string[] = [];
+
+  for (const entry of HEBREW_FONTS) {
+    const path = join(fontDir, entry.filename);
+    if (!existsSync(path)) {
+      missing.push(entry.filename);
+      if (opts.strict) {
+        throw new Error(`Hebrew font missing: ${path}`);
+      }
+      continue;
+    }
+    doc.registerFont(entry.alias, path);
+    registered.push(entry.alias);
+  }
+
+  // Set Hebrew as default if it loaded
+  if (registered.includes("Hebrew")) {
+    doc.font("Hebrew");
+  }
+
+  return { registered, missing };
+}
+
+/**
+ * Convenience: write a single line of Hebrew with proper RTL alignment.
+ * PDFKit ≥0.14 handles bidi internally when `features: ['rtla']` is set.
+ */
+export function writeHebrewLine(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  options: PDFKit.Mixins.TextOptions = {}
+): void {
+  doc.text(text, {
+    align: "right",
+    features: ["rtla", "rlig"],
+    ...options,
+  });
+}
