@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title><%= title %> — ניהול מלאי</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">ניהול מלאי</div>
+    <nav>
+      <a href="/" data-page="dashboard">דשבורד</a>
+      <a href="/products" data-page="products">מוצרים</a>
+      <a href="/stock" data-page="stock">מלאי</a>
+      <a href="/dishes" data-page="dishes">מנות + BOM</a>
+      <a href="/movements" data-page="movements">תנועות</a>
+      <a href="/alerts" data-page="alerts">התראות</a>
+      <a href="/po" data-page="po">הזמנות רכש</a>
+      <a href="/cyclecount" data-page="cyclecount">ספירת מלאי</a>
+      <a href="/valuation" data-page="valuation">שערוך</a>
+    </nav>
+  </header>
+
+  <main id="app" data-page="<%= page %>">
+    <h1><%= title %></h1>
+    <div id="content">טוען…</div>
+  </main>
+
+  <div id="modal-bg" class="modal-bg" hidden>
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <script>window.__PAGE__ = "<%= page %>";</script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
