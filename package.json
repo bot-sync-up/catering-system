@@ -1,18 +1,29 @@
 {
-  "name": "suppliers-po-system",
-  "version": "1.0.0",
-  "description": "מערכת ספקים והזמנות רכש (PO) — עברית RTL",
+  "name": "logistics-delivery",
+  "version": "0.1.0",
+  "description": "מערכת לוגיסטיקה ומשלוחים - צי רכב, מעקב, קבלני נהגים, שיבוץ ותיעוד מסירה",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node src/server.js",
-    "seed": "node src/db/seed.js",
-    "test": "node src/test/smoke.js"
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/"
+  },
+  "keywords": [
+    "logistics",
+    "delivery",
+    "fleet",
+    "tracking",
+    "hebrew",
+    "rtl"
+  ],
+  "author": "bot-sync-up",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^10.0.0"
   },
   "engines": {
-    "node": ">=18"
-  },
-  "dependencies": {
-    "express": "^4.21.0"
+    "node": ">=22.5.0"
   }
 }
