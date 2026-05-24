@@ -1,0 +1,6 @@
+# שמירה על LF בקבצי shell ו-YAML גם כשעובדים מ-Windows.
+*.sh        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.sql       text eol=lf
+Vagrantfile text eol=lf

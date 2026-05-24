@@ -1,0 +1,123 @@
+# docker-compose.dev.yml
+# סביבת פיתוח לוקאלית עבור פלטפורמת "ענה את השואל" / קייטרינג טעימים.
+# מפעיל: Postgres 16 + Redis 7 + MailHog (SMTP פיתוח) + MinIO (S3 פיתוח).
+# הרצה:  docker compose -f docker/docker-compose.dev.yml up -d
+# עצירה: docker compose -f docker/docker-compose.dev.yml down
+# איפוס מלא (מוחק נתונים!): docker compose -f docker/docker-compose.dev.yml down -v
+
+version: "3.9"
+
+networks:
+  catering_dev:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: catering_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: catering_dev
+      POSTGRES_USER: catering
+      POSTGRES_PASSWORD: dev_password_change_in_prod
+      # יצירת DB נוסף ל-tests + shadow ל-prisma migrate dev
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catering -d catering_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks: [catering_dev]
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "log_statement=none"
+      - "-c"
+      - "log_min_duration_statement=200"
+
+  redis:
+    image: redis:7-alpine
+    container_name: catering_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [catering_dev]
+    command: ["redis-server", "--appendonly", "yes"]
+
+  mailhog:
+    # שרת SMTP מקומי לבדיקת מיילים מבלי לשלוח לעולם החיצון.
+    # UI:  http://localhost:8025
+    # SMTP: localhost:1025  (ללא TLS, ללא auth)
+    image: mailhog/mailhog:latest
+    container_name: catering_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks: [catering_dev]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8025/api/v2/messages"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    # אובייקט-סטור תואם S3 לפיתוח (חלופה ל-R2/S3 בייצור).
+    # Console: http://localhost:9001  (catering / dev_password_change_in_prod)
+    # API:     http://localhost:9000
+    image: minio/minio:latest
+    container_name: catering_minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: catering
+      MINIO_ROOT_PASSWORD: dev_password_change_in_prod
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [catering_dev]
+
+  minio-bootstrap:
+    # יצירת bucket ברירת-מחדל פעם אחת אחרי שה-MinIO עולה.
+    image: minio/mc:latest
+    container_name: catering_minio_bootstrap
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 catering dev_password_change_in_prod &&
+      mc mb -p local/catering-uploads || true &&
+      mc anonymous set download local/catering-uploads || true &&
+      echo 'MinIO bucket catering-uploads ready'
+      "
+    networks: [catering_dev]
