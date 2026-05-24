@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload Playwright HTML report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-${{ matrix.project }}
           path: tests/e2e-playwright/playwright-report
@@ -120,7 +120,7 @@ jobs:
 
       - name: Upload JUnit results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: junit-${{ matrix.project }}
           path: tests/e2e-playwright/reports
@@ -128,7 +128,7 @@ jobs:
 
       - name: Upload traces & screenshots on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: traces-${{ matrix.project }}
           path: tests/e2e-playwright/test-results
