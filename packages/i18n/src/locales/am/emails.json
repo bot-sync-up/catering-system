@@ -1,0 +1,13 @@
+{
+  "greeting": "ሰላም {{name}}",
+  "signoff": "በአክብሮት፣\nየ{{company}} ቡድን",
+  "order_confirmation_subject": "የትዕዛዝ ማረጋገጫ #{{order_number}}",
+  "order_confirmation_intro": "ስለትዕዛዝዎ እናመሰግናለን! ዝርዝሮቹ እነሆ:",
+  "order_shipped_subject": "ትዕዛዝዎ ተልኳል",
+  "order_delivered_subject": "ትዕዛዝዎ ደርሷል",
+  "password_reset_subject": "የይለፍ ቃል ዳግም ማስጀመር",
+  "password_reset_body": "የይለፍ ቃልዎን እንደገና ለማስጀመር አገናኙን ይንኩ። አገናኙ ለ{{hours}} ሰዓታት ይሰራል።",
+  "welcome_subject": "ወደ {{company}} እንኳን ደህና መጡ!",
+  "footer_unsubscribe": "እነዚህን መልዕክቶች መቀበል ካልፈለጉ ለመውጣት እዚህ ይንኩ",
+  "footer_address": "{{company}} | {{address}}"
+}

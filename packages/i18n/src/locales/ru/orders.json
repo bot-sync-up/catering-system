@@ -1,0 +1,30 @@
+{
+  "title": "Заказы",
+  "new_order": "Новый заказ",
+  "order_number": "Номер заказа",
+  "customer": "Клиент",
+  "items": "Товары",
+  "total": "Итого",
+  "status": {
+    "pending": "Ожидает",
+    "confirmed": "Подтверждён",
+    "in_kitchen": "На кухне",
+    "ready": "Готов",
+    "on_the_way": "В пути",
+    "delivered": "Доставлен",
+    "cancelled": "Отменён"
+  },
+  "delivery_address": "Адрес доставки",
+  "delivery_time": "Время доставки",
+  "notes": "Заметки",
+  "payment_method": "Способ оплаты",
+  "subtotal": "Подытог",
+  "tax": "Налог",
+  "discount": "Скидка",
+  "tip": "Чаевые",
+  "no_orders": "Нет заказов для отображения",
+  "orders_count_one": "{{count}} заказ",
+  "orders_count_few": "{{count}} заказа",
+  "orders_count_many": "{{count}} заказов",
+  "orders_count_other": "{{count}} заказа"
+}

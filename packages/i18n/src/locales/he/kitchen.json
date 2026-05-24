@@ -1,0 +1,21 @@
+{
+  "title": "מטבח",
+  "active_orders": "הזמנות פעילות",
+  "preparation_time": "זמן הכנה",
+  "minutes_one": "דקה",
+  "minutes_other": "{{count}} דקות",
+  "start_preparation": "התחל הכנה",
+  "mark_ready": "סמן כמוכן",
+  "send_to_delivery": "שלח למשלוח",
+  "kitchen_station": "תחנת מטבח",
+  "stations": {
+    "grill": "גריל",
+    "fryer": "טיגון",
+    "salads": "סלטים",
+    "cold": "מאכלים קרים",
+    "drinks": "משקאות",
+    "desserts": "קינוחים"
+  },
+  "rush_hour": "שעת עומס",
+  "all_clear": "הכול ריק"
+}

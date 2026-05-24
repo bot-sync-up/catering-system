@@ -1,0 +1,13 @@
+{
+  "greeting": "مرحبا {{name}}،",
+  "signoff": "مع تحياتنا،\nفريق {{company}}",
+  "order_confirmation_subject": "تأكيد الطلب #{{order_number}}",
+  "order_confirmation_intro": "شكرا لطلبك! إليك التفاصيل:",
+  "order_shipped_subject": "تم شحن طلبك",
+  "order_delivered_subject": "تم توصيل طلبك",
+  "password_reset_subject": "إعادة تعيين كلمة المرور",
+  "password_reset_body": "انقر على الرابط لإعادة تعيين كلمة المرور. الرابط صالح لمدة {{hours}} ساعات.",
+  "welcome_subject": "مرحبا بك في {{company}}!",
+  "footer_unsubscribe": "إذا لم تعد ترغب في تلقي هذه الرسائل، انقر هنا لإلغاء الاشتراك",
+  "footer_address": "{{company}} | {{address}}"
+}

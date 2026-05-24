@@ -1,0 +1,21 @@
+{
+  "title": "ወጥ ቤት",
+  "active_orders": "ንቁ ትዕዛዞች",
+  "preparation_time": "የዝግጅት ጊዜ",
+  "minutes_one": "{{count}} ደቂቃ",
+  "minutes_other": "{{count}} ደቂቃዎች",
+  "start_preparation": "ዝግጅት ጀምር",
+  "mark_ready": "ዝግጁ መሆኑን ምልክት አድርግ",
+  "send_to_delivery": "ለመላኪያ ላክ",
+  "kitchen_station": "የወጥ ቤት ጣቢያ",
+  "stations": {
+    "grill": "ጥብስ",
+    "fryer": "ቁልል",
+    "salads": "ሰላጣዎች",
+    "cold": "ቀዝቃዛ ምግቦች",
+    "drinks": "መጠጦች",
+    "desserts": "ጣፋጭ ምግቦች"
+  },
+  "rush_hour": "የጭንቅ ሰዓት",
+  "all_clear": "ሁሉም ነፃ ነው"
+}

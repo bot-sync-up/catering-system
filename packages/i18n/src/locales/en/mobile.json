@@ -1,0 +1,17 @@
+{
+  "menu": "Menu",
+  "home": "Home",
+  "scan_qr": "Scan QR",
+  "notifications": "Notifications",
+  "no_notifications": "No new notifications",
+  "pull_to_refresh": "Pull to refresh",
+  "offline": "No internet connection",
+  "reconnecting": "Reconnecting...",
+  "tap_to_retry": "Tap to retry",
+  "permission_camera": "Camera permission required",
+  "permission_location": "Location permission required",
+  "permission_notifications": "Notification permission required",
+  "app_update_available": "App update available",
+  "update_now": "Update now",
+  "later": "Later"
+}

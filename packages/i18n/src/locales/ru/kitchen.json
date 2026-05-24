@@ -1,0 +1,23 @@
+{
+  "title": "Кухня",
+  "active_orders": "Активные заказы",
+  "preparation_time": "Время приготовления",
+  "minutes_one": "{{count}} минута",
+  "minutes_few": "{{count}} минуты",
+  "minutes_many": "{{count}} минут",
+  "minutes_other": "{{count}} минуты",
+  "start_preparation": "Начать приготовление",
+  "mark_ready": "Отметить как готово",
+  "send_to_delivery": "Отправить на доставку",
+  "kitchen_station": "Кухонная станция",
+  "stations": {
+    "grill": "Гриль",
+    "fryer": "Жарка",
+    "salads": "Салаты",
+    "cold": "Холодные блюда",
+    "drinks": "Напитки",
+    "desserts": "Десерты"
+  },
+  "rush_hour": "Час пик",
+  "all_clear": "Всё свободно"
+}

@@ -1,0 +1,13 @@
+{
+  "greeting": "שלום {{name}},",
+  "signoff": "בברכה,\nצוות {{company}}",
+  "order_confirmation_subject": "אישור הזמנה #{{order_number}}",
+  "order_confirmation_intro": "תודה שהזמנת מאיתנו! להלן פרטי ההזמנה שלך:",
+  "order_shipped_subject": "ההזמנה שלך יצאה למשלוח",
+  "order_delivered_subject": "ההזמנה שלך הגיעה",
+  "password_reset_subject": "איפוס סיסמה",
+  "password_reset_body": "לחץ על הקישור כדי לאפס את הסיסמה. הקישור תקף ל-{{hours}} שעות.",
+  "welcome_subject": "ברוך הבא ל-{{company}}!",
+  "footer_unsubscribe": "אם אינך מעוניין לקבל הודעות אלה, לחץ כאן להסרה",
+  "footer_address": "{{company}} | {{address}}"
+}

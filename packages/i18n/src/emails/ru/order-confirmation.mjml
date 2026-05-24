@@ -1,0 +1,76 @@
+<mjml dir="ltr" lang="ru">
+  <mj-head>
+    <mj-title>Подтверждение заказа #{{order_number}}</mj-title>
+    <mj-preview>Спасибо за заказ в {{company}}! Детали внутри.</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text align="left" font-size="14px" line-height="1.6" color="#333" />
+      <mj-section padding="0 16px" />
+    </mj-attributes>
+    <mj-style>
+      .price { font-weight: bold; color: #2a7ade; }
+      .muted { color: #888; font-size: 12px; }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f5f5f5" width="600px">
+    <mj-section background-color="#2a7ade" padding="20px">
+      <mj-column>
+        <mj-text color="#fff" font-size="20px" font-weight="bold">{{company}}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fff">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold">Здравствуйте, {{customer_name}}!</mj-text>
+        <mj-text>Спасибо за заказ! Мы получили его и уже обрабатываем.</mj-text>
+        <mj-text><strong>Номер заказа:</strong> #{{order_number}}</mj-text>
+        <mj-text><strong>Дата:</strong> {{order_date}}</mj-text>
+        <mj-text><strong>Ориентировочное время доставки:</strong> {{eta}}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fff">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">Детали заказа</mj-text>
+        <mj-table>
+          <tr style="border-bottom:1px solid #ddd;text-align:left;">
+            <th style="padding:8px;">Товар</th>
+            <th style="padding:8px;">Кол-во</th>
+            <th style="padding:8px;">Цена</th>
+          </tr>
+          {{#items}}
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:8px;">{{name}}</td>
+            <td style="padding:8px;">{{quantity}}</td>
+            <td style="padding:8px;" class="price">₪{{price}}</td>
+          </tr>
+          {{/items}}
+          <tr>
+            <td colspan="2" style="padding:8px;text-align:right;font-weight:bold;">Итого:</td>
+            <td style="padding:8px;" class="price">₪{{total}}</td>
+          </tr>
+        </mj-table>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fff">
+      <mj-column>
+        <mj-text><strong>Адрес доставки:</strong> {{delivery_address}}</mj-text>
+        <mj-button background-color="#2a7ade" href="{{tracking_url}}">Отследить заказ</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fff">
+      <mj-column>
+        <mj-text class="muted">
+          С уважением,<br/>
+          Команда {{company}}<br/>
+          {{company_address}}
+        </mj-text>
+        <mj-text class="muted">
+          Если вы не оформляли этот заказ, <a href="{{contact_url}}">свяжитесь с нами</a>.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
