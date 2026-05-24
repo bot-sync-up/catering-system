@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>aps-environment</key>
+    <string>production</string>
+    <key>com.apple.developer.usernotifications.communication</key>
+    <true/>
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.co.il.syncup.catering</string>
+    </array>
+    <key>com.apple.developer.location.push</key>
+    <true/>
+    <key>com.apple.developer.in-app-payments</key>
+    <array/>
+    <key>keychain-access-groups</key>
+    <array>
+        <string>$(AppIdentifierPrefix)co.il.syncup.catering</string>
+    </array>
+    <key>com.apple.developer.networking.wifi-info</key>
+    <true/>
+    <key>com.apple.developer.authentication-services.autofill-credential-provider</key>
+    <false/>
+    <key>com.apple.developer.background-tasks</key>
+    <array>
+        <string>co.il.syncup.catering.offline-sync</string>
+    </array>
+</dict>
+</plist>

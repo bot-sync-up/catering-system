@@ -1,0 +1,306 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000001 /* CateringApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001 /* CateringApp.swift */; };
+		A1000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002 /* AppDelegate.swift */; };
+		A1000003 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000003 /* RootView.swift */; };
+		A1000004 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000004 /* APIClient.swift */; };
+		A1000005 /* RealmManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000005 /* RealmManager.swift */; };
+		A1000006 /* KeychainTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000006 /* KeychainTokenStore.swift */; };
+		A1000007 /* BiometricAuthenticator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000007 /* BiometricAuthenticator.swift */; };
+		A1000008 /* OfflineQueueSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000008 /* OfflineQueueSync.swift */; };
+		A1000009 /* FCMManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000009 /* FCMManager.swift */; };
+		A1000010 /* QuietHours.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000010 /* QuietHours.swift */; };
+		A1000011 /* GeofencingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000011 /* GeofencingManager.swift */; };
+		A1000012 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000012 /* CameraView.swift */; };
+		A1000013 /* Localizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000013 /* Localizer.swift */; };
+		A1000014 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000014 /* Models.swift */; };
+		A1000015 /* UseCases.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000015 /* UseCases.swift */; };
+		A1000016 /* Repositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000016 /* Repositories.swift */; };
+		A1000017 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000017 /* LoginView.swift */; };
+		A1000018 /* BiometricView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000018 /* BiometricView.swift */; };
+		A1000019 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000019 /* DashboardView.swift */; };
+		A1000020 /* CrmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000020 /* CrmView.swift */; };
+		A1000021 /* LeadDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000021 /* LeadDetailView.swift */; };
+		A1000022 /* PrepTasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000022 /* PrepTasksView.swift */; };
+		A1000023 /* MarkDoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000023 /* MarkDoneView.swift */; };
+		A1000024 /* ClockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000024 /* ClockView.swift */; };
+		A1000025 /* MyShiftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000025 /* MyShiftsView.swift */; };
+		A1000026 /* RequestSwapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000026 /* RequestSwapView.swift */; };
+		A1000027 /* DeliveriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000027 /* DeliveriesView.swift */; };
+		A1000028 /* NavigateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000028 /* NavigateView.swift */; };
+		A1000029 /* SignatureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000029 /* SignatureView.swift */; };
+		A1000030 /* MyOrdersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000030 /* MyOrdersView.swift */; };
+		A1000031 /* NewOrderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000031 /* NewOrderView.swift */; };
+		A1000032 /* CameraOcrView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000032 /* CameraOcrView.swift */; };
+		A1000033 /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000033 /* BarcodeScannerView.swift */; };
+		A1000034 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000034 /* SettingsView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B1000001 /* CateringApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CateringApp.swift; sourceTree = "<group>"; };
+		B1000002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		B1000003 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		B1000004 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		B1000005 /* RealmManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealmManager.swift; sourceTree = "<group>"; };
+		B1000006 /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
+		B1000007 /* BiometricAuthenticator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricAuthenticator.swift; sourceTree = "<group>"; };
+		B1000008 /* OfflineQueueSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueueSync.swift; sourceTree = "<group>"; };
+		B1000009 /* FCMManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FCMManager.swift; sourceTree = "<group>"; };
+		B1000010 /* QuietHours.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuietHours.swift; sourceTree = "<group>"; };
+		B1000011 /* GeofencingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeofencingManager.swift; sourceTree = "<group>"; };
+		B1000012 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
+		B1000013 /* Localizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localizer.swift; sourceTree = "<group>"; };
+		B1000014 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		B1000015 /* UseCases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UseCases.swift; sourceTree = "<group>"; };
+		B1000016 /* Repositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repositories.swift; sourceTree = "<group>"; };
+		B1000017 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		B1000018 /* BiometricView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricView.swift; sourceTree = "<group>"; };
+		B1000019 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		B1000020 /* CrmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrmView.swift; sourceTree = "<group>"; };
+		B1000021 /* LeadDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeadDetailView.swift; sourceTree = "<group>"; };
+		B1000022 /* PrepTasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrepTasksView.swift; sourceTree = "<group>"; };
+		B1000023 /* MarkDoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkDoneView.swift; sourceTree = "<group>"; };
+		B1000024 /* ClockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockView.swift; sourceTree = "<group>"; };
+		B1000025 /* MyShiftsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyShiftsView.swift; sourceTree = "<group>"; };
+		B1000026 /* RequestSwapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestSwapView.swift; sourceTree = "<group>"; };
+		B1000027 /* DeliveriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeliveriesView.swift; sourceTree = "<group>"; };
+		B1000028 /* NavigateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigateView.swift; sourceTree = "<group>"; };
+		B1000029 /* SignatureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignatureView.swift; sourceTree = "<group>"; };
+		B1000030 /* MyOrdersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyOrdersView.swift; sourceTree = "<group>"; };
+		B1000031 /* NewOrderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewOrderView.swift; sourceTree = "<group>"; };
+		B1000032 /* CameraOcrView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraOcrView.swift; sourceTree = "<group>"; };
+		B1000033 /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
+		B1000034 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		C1000001 /* Catering.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Catering.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C1000003 /* Catering.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Catering.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D1000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		E1000001 = {
+			isa = PBXGroup;
+			children = (
+				E1000002 /* Catering */,
+				E1000099 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E1000002 /* Catering */ = {
+			isa = PBXGroup;
+			children = (
+				C1000002 /* Info.plist */,
+				C1000003 /* Catering.entitlements */,
+				B1000001 /* CateringApp.swift */,
+				B1000002 /* AppDelegate.swift */,
+				B1000003 /* RootView.swift */,
+			);
+			path = Catering;
+			sourceTree = "<group>";
+		};
+		E1000099 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C1000001 /* Catering.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F1000001 /* Catering */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = G1000001 /* Build configuration list for PBXNativeTarget "Catering" */;
+			buildPhases = (
+				H1000001 /* Sources */,
+				D1000001 /* Frameworks */,
+				I1000001 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = Catering;
+			productName = Catering;
+			productReference = C1000001 /* Catering.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		J1000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1510;
+				LastUpgradeCheck = 1510;
+				TargetAttributes = {
+					F1000001 = {
+						CreatedOnToolsVersion = 15.1;
+					};
+				};
+			};
+			buildConfigurationList = K1000001 /* Build configuration list for PBXProject "Catering" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = he;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				he,
+				en,
+				Base,
+			);
+			mainGroup = E1000001;
+			productRefGroup = E1000099 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F1000001 /* Catering */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		I1000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		H1000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000001 /* CateringApp.swift in Sources */,
+				A1000002 /* AppDelegate.swift in Sources */,
+				A1000003 /* RootView.swift in Sources */,
+				A1000004 /* APIClient.swift in Sources */,
+				A1000005 /* RealmManager.swift in Sources */,
+				A1000006 /* KeychainTokenStore.swift in Sources */,
+				A1000007 /* BiometricAuthenticator.swift in Sources */,
+				A1000008 /* OfflineQueueSync.swift in Sources */,
+				A1000009 /* FCMManager.swift in Sources */,
+				A1000010 /* QuietHours.swift in Sources */,
+				A1000011 /* GeofencingManager.swift in Sources */,
+				A1000012 /* CameraView.swift in Sources */,
+				A1000013 /* Localizer.swift in Sources */,
+				A1000014 /* Models.swift in Sources */,
+				A1000015 /* UseCases.swift in Sources */,
+				A1000016 /* Repositories.swift in Sources */,
+				A1000017 /* LoginView.swift in Sources */,
+				A1000018 /* BiometricView.swift in Sources */,
+				A1000019 /* DashboardView.swift in Sources */,
+				A1000020 /* CrmView.swift in Sources */,
+				A1000021 /* LeadDetailView.swift in Sources */,
+				A1000022 /* PrepTasksView.swift in Sources */,
+				A1000023 /* MarkDoneView.swift in Sources */,
+				A1000024 /* ClockView.swift in Sources */,
+				A1000025 /* MyShiftsView.swift in Sources */,
+				A1000026 /* RequestSwapView.swift in Sources */,
+				A1000027 /* DeliveriesView.swift in Sources */,
+				A1000028 /* NavigateView.swift in Sources */,
+				A1000029 /* SignatureView.swift in Sources */,
+				A1000030 /* MyOrdersView.swift in Sources */,
+				A1000031 /* NewOrderView.swift in Sources */,
+				A1000032 /* CameraOcrView.swift in Sources */,
+				A1000033 /* BarcodeScannerView.swift in Sources */,
+				A1000034 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		L1000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SWIFT_VERSION = 5.10;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_BITCODE = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		L1000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SWIFT_VERSION = 5.10;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_BITCODE = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		M1000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = "co.il.syncup.catering";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				CODE_SIGN_ENTITLEMENTS = Catering/Catering.entitlements;
+				INFOPLIST_FILE = Catering/Info.plist;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = SYNCUP1234;
+				MARKETING_VERSION = 1.0.0;
+				CURRENT_PROJECT_VERSION = 1;
+			};
+			name = Debug;
+		};
+		M1000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = "co.il.syncup.catering";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				CODE_SIGN_ENTITLEMENTS = Catering/Catering.entitlements;
+				INFOPLIST_FILE = Catering/Info.plist;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = SYNCUP1234;
+				MARKETING_VERSION = 1.0.0;
+				CURRENT_PROJECT_VERSION = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		K1000001 /* Build configuration list for PBXProject "Catering" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				L1000001 /* Debug */,
+				L1000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		G1000001 /* Build configuration list for PBXNativeTarget "Catering" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				M1000001 /* Debug */,
+				M1000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = J1000001 /* Project object */;
+}
