@@ -1,0 +1,51 @@
+{
+  "name": "@syncup/integrations-marketplace",
+  "version": "0.1.0",
+  "description": "Plugin marketplace and integration framework for Sync Up — calendar, accounting, payment, BI, marketing, operations, communication and storage integrations",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src plugins --ext .ts",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "plugins",
+    "marketplace",
+    "integrations",
+    "syncup",
+    "israeli-business"
+  ],
+  "author": "Sync Up",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "express": "^4.18.2",
+    "googleapis": "^131.0.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "ical-generator": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.22.0",
+    "exceljs": "^4.4.0",
+    "csv-parse": "^5.5.0",
+    "csv-stringify": "^6.4.0",
+    "stripe": "^14.0.0",
+    "@slack/web-api": "^7.0.0",
+    "discord.js": "^14.14.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
