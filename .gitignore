@@ -1,11 +1,8 @@
-node_modules
-.next
-out
-dist
+node_modules/
+.next/
+out/
 .env
 .env.local
 *.log
+prisma/dev.db*
 .DS_Store
-.vscode
-.idea
-prisma/migrations/dev.db*

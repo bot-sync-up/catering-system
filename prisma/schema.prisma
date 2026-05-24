@@ -1,369 +1,123 @@
-// CRM Prisma Schema
+// Prisma schema - Kitchen / Recipes management
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-// =================== Enums ===================
-enum CustomerType {
-  B2B
-  B2C
-  INSTITUTION
+// =================== Catalog ===================
+
+model Product {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  unit        String          // kg, g, l, ml, unit
+  category    String?
+  notes       String?
+  prices      SupplierPrice[]
+  ingredients RecipeIngredient[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 }
 
-enum CustomerStatus {
-  ACTIVE
-  INACTIVE
-  CHURNED
-  PROSPECT
+model Supplier {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  phone     String?
+  prices    SupplierPrice[]
+  createdAt DateTime        @default(now())
 }
 
-enum LeadSource {
-  REFERRAL
-  ADVERTISEMENT
-  ORGANIC
-  EVENT
-  COLD_OUTREACH
-  PARTNER
-  WEBSITE
-  OTHER
+model SupplierPrice {
+  id         String   @id @default(cuid())
+  productId  String
+  supplierId String
+  price      Float    // per `unit` of product
+  unit       String
+  notes      String?
+  validFrom  DateTime @default(now())
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  @@index([productId])
 }
 
-enum LeadStatus {
-  NEW          // לידים חדשים
-  CONTACTED    // יצרנו קשר
-  PROPOSAL     // הצ"מ – הצעת מחיר
-  NEGOTIATION  // מו"מ
-  WON          // סגירה
-  LOST         // אבד
+// =================== Recipes ===================
+
+model Recipe {
+  id            String          @id @default(cuid())
+  name          String
+  category      String?         // appetizer / main / dessert
+  defaultServings Int           @default(10)
+  markupPct     Float           @default(200) // % markup from cost
+  currentVersionId String?      @unique
+  versions      RecipeVersion[] @relation("RecipeVersions")
+  currentVersion RecipeVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 }
 
-enum TagKind {
-  VIP
-  RETURNING
-  NEW
-  AT_RISK
-  CUSTOM
+model RecipeVersion {
+  id           String             @id @default(cuid())
+  recipeId     String
+  parentId     String?            // git-like parent
+  tier         String             // BASIC | VIP
+  label        String             // v1, v2, "kosher", etc
+  message      String?            // commit message
+  servings     Int                @default(10)
+  instructions String?            // markdown
+  prepMinutes  Int                @default(60)
+  cookMinutes  Int                @default(0)
+  recipe       Recipe             @relation("RecipeVersions", fields: [recipeId], references: [id], onDelete: Cascade)
+  parent       RecipeVersion?     @relation("VersionParent", fields: [parentId], references: [id])
+  children     RecipeVersion[]    @relation("VersionParent")
+  ingredients  RecipeIngredient[]
+  prepTasks    PrepTask[]
+  current      Recipe?            @relation("CurrentVersion")
+  createdAt    DateTime           @default(now())
+  @@index([recipeId])
 }
 
-enum NoteKind {
-  GENERAL
-  CALL
-  MEETING
-  EMAIL
-  WHATSAPP
-}
-
-enum DocumentKind {
-  CONTRACT
-  PROPOSAL
-  INVOICE
-  ID
-  OTHER
-}
-
-enum FollowUpStatus {
-  PENDING
-  DONE
-  SNOOZED
-  CANCELLED
-}
-
-enum ActivityKind {
-  CREATED
-  UPDATED
-  STAGE_CHANGED
-  NOTE_ADDED
-  TAG_ADDED
-  TAG_REMOVED
-  DOC_ADDED
-  ASSIGNED
-}
-
-// =================== Users / Account Managers ===================
-model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  name            String
-  role            String    @default("agent") // agent | manager | admin
-  avatarUrl       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  managedCustomers Customer[]    @relation("AccountManager")
-  assignedLeads    Lead[]        @relation("LeadOwner")
-  notes            Note[]
-  followUps        FollowUp[]
-  activities       Activity[]
-  meetings         Meeting[]     @relation("MeetingOrganizer")
-}
-
-// =================== Customer ===================
-model Customer {
-  id           String         @id @default(cuid())
-  type         CustomerType
-  status       CustomerStatus @default(PROSPECT)
-  displayName  String
-  companyName  String?
-  taxId        String?        // ח.פ / ע.מ
-  email        String?
-  phone        String?
-  website      String?
-  notes        String?
-  churnScore   Float          @default(0) // 0..1
-  upsellScore  Float          @default(0) // 0..1
-  ltv          Float          @default(0)
-  lastContact  DateTime?
-
-  accountManagerId String?
-  accountManager   User?     @relation("AccountManager", fields: [accountManagerId], references: [id])
-
-  contactPersons ContactPerson[]
-  addresses      Address[]
-  tags           CustomerTag[]
-  notesList      Note[]
-  documents      Document[]
-  meetings       Meeting[]
-  leads          Lead[]
-  referredLeads  Lead[]      @relation("ReferralCustomer")
-  relationsFrom  Relation[]  @relation("RelationFrom")
-  relationsTo    Relation[]  @relation("RelationTo")
-  followUps      FollowUp[]
-  activities     Activity[]
-
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  @@index([type, status])
-  @@index([accountManagerId])
-  @@index([displayName])
-}
-
-model ContactPerson {
-  id          String    @id @default(cuid())
-  customerId  String
-  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  fullName    String
-  role        String?
-  email       String?
-  phone       String?
-  isPrimary   Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([customerId])
-}
-
-model Address {
-  id          String   @id @default(cuid())
-  customerId  String
-  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  label       String?  // בית/משרד/חיוב/משלוח
-  street      String
-  city        String
-  region      String?
-  postalCode  String?
-  country     String   @default("IL")
-  isPrimary   Boolean  @default(false)
-
-  @@index([customerId])
-}
-
-// קישור לקוח-לקוח (קשרים: בעל-בעלים, חברת בת, ממליץ וכו')
-model Relation {
-  id        String   @id @default(cuid())
-  fromId    String
-  toId      String
-  kind      String   // referrer, parent_company, subsidiary, partner, family
-  notes     String?
-  from      Customer @relation("RelationFrom", fields: [fromId], references: [id], onDelete: Cascade)
-  to        Customer @relation("RelationTo", fields: [toId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([fromId, toId, kind])
-  @@index([fromId])
-  @@index([toId])
-}
-
-// =================== Tags ===================
-model Tag {
+model RecipeIngredient {
   id        String        @id @default(cuid())
-  name      String        @unique
-  kind      TagKind       @default(CUSTOM)
-  color     String        @default("#3b82f6")
-  customers CustomerTag[]
-  createdAt DateTime      @default(now())
+  versionId String
+  productId String
+  qty       Float         // qty per defaultServings
+  unit      String
+  notes     String?
+  version   RecipeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  product   Product       @relation(fields: [productId], references: [id])
+  @@index([versionId])
 }
 
-model CustomerTag {
-  customerId String
-  tagId      String
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  assignedAt DateTime @default(now())
+// =================== Prep planning ===================
 
-  @@id([customerId, tagId])
-  @@index([tagId])
+model Event {
+  id        String     @id @default(cuid())
+  name      String
+  date      DateTime
+  guests    Int        @default(50)
+  notes     String?
+  prepTasks PrepTask[]
+  createdAt DateTime   @default(now())
 }
 
-// =================== Notes / Documents / Meetings ===================
-model Note {
-  id          String    @id @default(cuid())
-  customerId  String
-  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  authorId    String
-  author      User      @relation(fields: [authorId], references: [id])
-  kind        NoteKind  @default(GENERAL)
-  body        String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([customerId])
-  @@index([authorId])
-}
-
-model Document {
-  id          String       @id @default(cuid())
-  customerId  String
-  customer    Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  kind        DocumentKind @default(OTHER)
+model PrepTask {
+  id          String        @id @default(cuid())
+  eventId     String?
+  versionId   String
   title       String
-  url         String
-  mimeType    String?
-  sizeBytes   Int?
-  createdAt   DateTime     @default(now())
-
-  @@index([customerId])
-}
-
-model Meeting {
-  id           String    @id @default(cuid())
-  customerId   String
-  customer     Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  organizerId  String
-  organizer    User      @relation("MeetingOrganizer", fields: [organizerId], references: [id])
-  title        String
-  location     String?
-  startsAt     DateTime
-  endsAt       DateTime
-  notes        String?
-  createdAt    DateTime  @default(now())
-
-  @@index([customerId, startsAt])
-}
-
-// =================== Leads / Pipeline ===================
-model Pipeline {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  isDefault   Boolean  @default(false)
-  stages      Stage[]
-  leads       Lead[]
-  createdAt   DateTime @default(now())
-}
-
-model Stage {
-  id          String   @id @default(cuid())
-  pipelineId  String
-  pipeline    Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  name        String
-  order       Int
-  probability Float    @default(0) // 0..1
-  isWon       Boolean  @default(false)
-  isLost      Boolean  @default(false)
-  leads       Lead[]
-
-  @@unique([pipelineId, order])
-  @@index([pipelineId])
-}
-
-model Lead {
-  id          String     @id @default(cuid())
-  title       String
-  description String?
-  source      LeadSource @default(WEBSITE)
-  status      LeadStatus @default(NEW)
-  value       Float      @default(0) // ערך עסקה משוער
-  currency    String     @default("ILS")
-
-  // UTM tracking
-  utmSource   String?
-  utmMedium   String?
-  utmCampaign String?
-  utmTerm     String?
-  utmContent  String?
-  referrer    String?
-
-  // Pipeline
-  pipelineId  String
-  pipeline    Pipeline   @relation(fields: [pipelineId], references: [id])
-  stageId     String
-  stage       Stage      @relation(fields: [stageId], references: [id])
-  positionInStage Int    @default(0)
-
-  // קשרים
-  customerId  String?
-  customer    Customer?  @relation(fields: [customerId], references: [id])
-  ownerId     String?
-  owner       User?      @relation("LeadOwner", fields: [ownerId], references: [id])
-
-  // לידים שהגיעו מהמלצה (Referral)
-  referredById String?
-  referredBy   Customer? @relation("ReferralCustomer", fields: [referredById], references: [id])
-
-  expectedCloseAt DateTime?
-  closedAt        DateTime?
-  followUps       FollowUp[]
-
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  @@index([pipelineId, stageId, positionInStage])
-  @@index([ownerId])
-  @@index([status])
-  @@index([source])
-  @@index([utmSource, utmCampaign])
-}
-
-// =================== Follow-ups / Reminders ===================
-model FollowUp {
-  id          String         @id @default(cuid())
-  title       String
-  body        String?
-  dueAt       DateTime
-  status      FollowUpStatus @default(PENDING)
-  reminded    Boolean        @default(false)
-
-  customerId  String?
-  customer    Customer?      @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  leadId      String?
-  lead        Lead?          @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  ownerId     String
-  owner       User           @relation(fields: [ownerId], references: [id])
-
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-
-  @@index([ownerId, status, dueAt])
-  @@index([dueAt])
-}
-
-// =================== Activity log ===================
-model Activity {
-  id          String       @id @default(cuid())
-  customerId  String?
-  customer    Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  actorId     String
-  actor       User         @relation(fields: [actorId], references: [id])
-  kind        ActivityKind
-  payload     Json?
-  createdAt   DateTime     @default(now())
-
-  @@index([customerId, createdAt])
-  @@index([actorId, createdAt])
+  station     String?       // hot / cold / pastry
+  assignee    String?       // worker name
+  startAt     DateTime
+  durationMin Int
+  parallel    Boolean       @default(false) // can run in parallel with others
+  mustPrep    Boolean       @default(true)  // appears in Gantt
+  status      String        @default("planned") // planned | doing | done
+  servings    Int           @default(10)
+  event       Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  version     RecipeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  @@index([eventId])
+  @@index([startAt])
 }
