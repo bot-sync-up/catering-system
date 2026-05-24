@@ -1,0 +1,498 @@
+// Marketing Platform Prisma Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================
+// Auth / Users
+// =====================================================
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  role          UserRole @default(MARKETER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  campaigns     Campaign[]
+  tickets       Ticket[]    @relation("AssignedTickets")
+  comments      TicketComment[]
+}
+
+enum UserRole {
+  ADMIN
+  MARKETER
+  AGENT
+  VIEWER
+}
+
+// =====================================================
+// Leads / Contacts (with UTM attribution)
+// =====================================================
+model Lead {
+  id            String   @id @default(cuid())
+  email         String?  @unique
+  phone         String?  @unique
+  firstName     String?
+  lastName      String?
+  language      String   @default("he")
+  consentEmail  Boolean  @default(false)
+  consentSms    Boolean  @default(false)
+  consentWa     Boolean  @default(false)
+  tags          String[] @default([])
+  attributes    Json     @default("{}")
+  source        String?
+  status        LeadStatus @default(NEW)
+  score         Int      @default(0)
+  lastSeenAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  utmTouches    LeadUtmTouch[]
+  events        LeadEvent[]
+  sends         MessageSend[]
+  responses     SurveyResponse[]
+  tickets       Ticket[]
+  chats         ChatbotConversation[]
+  segmentMembers SegmentMember[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum LeadStatus {
+  NEW
+  ENGAGED
+  QUALIFIED
+  CUSTOMER
+  LOST
+  UNSUBSCRIBED
+}
+
+model LeadUtmTouch {
+  id          String   @id @default(cuid())
+  leadId      String
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmTerm     String?
+  utmContent  String?
+  referrer    String?
+  landingPage String?
+  ipAddress   String?
+  userAgent   String?
+  touchType   TouchType @default(VISIT)
+  cost        Float?
+  createdAt   DateTime  @default(now())
+
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([utmCampaign])
+  @@index([createdAt])
+}
+
+enum TouchType {
+  VISIT
+  CONVERSION
+  REVENUE
+}
+
+model LeadEvent {
+  id        String   @id @default(cuid())
+  leadId    String
+  type      String
+  value     Json?
+  createdAt DateTime @default(now())
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, type])
+  @@index([createdAt])
+}
+
+// =====================================================
+// Segments (dynamic + static)
+// =====================================================
+model Segment {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        SegmentType @default(DYNAMIC)
+  // JSON rules tree: { op: 'AND'|'OR', children: [{ field, op, value }] }
+  rules       Json     @default("{}")
+  memberCount Int      @default(0)
+  lastEvaluatedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     SegmentMember[]
+  campaigns   Campaign[]
+}
+
+enum SegmentType {
+  DYNAMIC
+  STATIC
+}
+
+model SegmentMember {
+  segmentId String
+  leadId    String
+  addedAt   DateTime @default(now())
+
+  segment   Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@id([segmentId, leadId])
+  @@index([leadId])
+}
+
+// =====================================================
+// Campaigns + Templates + A/B testing
+// =====================================================
+model Template {
+  id        String   @id @default(cuid())
+  name      String
+  channel   Channel
+  subject   String?
+  // For email: HTML; for sms/wa: plaintext with {{var}} placeholders
+  body      String
+  // Drag&drop builder representation (JSON tree of blocks)
+  design    Json?
+  variables Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  variants  CampaignVariant[]
+}
+
+enum Channel {
+  EMAIL
+  SMS
+  WHATSAPP
+  PUSH
+}
+
+model Campaign {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  status        CampaignStatus @default(DRAFT)
+  channel       Channel
+  segmentId     String?
+  scheduledAt   DateTime?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  goal          String?
+  // Total budget for ROI calculation
+  budget        Float    @default(0)
+  // A/B test config: { enabled, splitPct: [50,50], winnerMetric: 'open'|'click'|'convert' }
+  abConfig      Json     @default("{}")
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  createdBy     User     @relation(fields: [createdById], references: [id])
+  segment       Segment? @relation(fields: [segmentId], references: [id])
+  variants      CampaignVariant[]
+  sends         MessageSend[]
+
+  @@index([status])
+  @@index([channel])
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+model CampaignVariant {
+  id          String   @id @default(cuid())
+  campaignId  String
+  templateId  String
+  label       String   @default("A")
+  weight      Int      @default(50)
+  isWinner    Boolean  @default(false)
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  template    Template @relation(fields: [templateId], references: [id])
+  sends       MessageSend[]
+}
+
+// =====================================================
+// Sends (per-recipient delivery + tracking)
+// =====================================================
+model MessageSend {
+  id             String   @id @default(cuid())
+  campaignId     String?
+  variantId      String?
+  leadId         String
+  channel        Channel
+  to             String
+  subject        String?
+  body           String
+  status         SendStatus @default(QUEUED)
+  providerMessageId String?
+  errorMessage   String?
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  openedAt       DateTime?
+  clickedAt      DateTime?
+  convertedAt    DateTime?
+  unsubscribedAt DateTime?
+  bouncedAt      DateTime?
+  cost           Float    @default(0)
+  createdAt      DateTime @default(now())
+
+  campaign       Campaign?        @relation(fields: [campaignId], references: [id])
+  variant        CampaignVariant? @relation(fields: [variantId], references: [id])
+  lead           Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([leadId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum SendStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  CONVERTED
+  BOUNCED
+  FAILED
+  UNSUBSCRIBED
+}
+
+// =====================================================
+// Surveys + NPS
+// =====================================================
+model Survey {
+  id          String   @id @default(cuid())
+  name        String
+  type        SurveyType @default(NPS)
+  question    String
+  channel     Channel  @default(EMAIL)
+  // Trigger config: { event: 'purchase'|'support_resolved'|..., delayMinutes }
+  trigger     Json     @default("{}")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  responses   SurveyResponse[]
+}
+
+enum SurveyType {
+  NPS
+  CSAT
+  CES
+  CUSTOM
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String
+  leadId      String
+  score       Int?
+  comment     String?
+  category    NpsCategory?
+  createdAt   DateTime @default(now())
+
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([surveyId])
+  @@index([leadId])
+}
+
+enum NpsCategory {
+  DETRACTOR
+  PASSIVE
+  PROMOTER
+}
+
+// =====================================================
+// Tickets (CS)
+// =====================================================
+model Ticket {
+  id            String   @id @default(cuid())
+  number        Int      @unique @default(autoincrement())
+  leadId        String?
+  subject       String
+  description   String
+  status        TicketStatus @default(OPEN)
+  priority      TicketPriority @default(NORMAL)
+  channel       Channel?
+  assignedToId  String?
+  tags          String[] @default([])
+  // Was this ticket escalated from the chatbot?
+  escalatedFromChat Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  resolvedAt    DateTime?
+
+  lead          Lead?    @relation(fields: [leadId], references: [id])
+  assignedTo    User?    @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  comments      TicketComment[]
+
+  @@index([status])
+  @@index([assignedToId])
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model TicketComment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  authorId  String?
+  body      String
+  internal  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author    User?    @relation(fields: [authorId], references: [id])
+}
+
+// =====================================================
+// Chatbot
+// =====================================================
+model ChatbotConversation {
+  id          String   @id @default(cuid())
+  leadId      String?
+  channel     Channel  @default(WHATSAPP)
+  externalId  String?  // wa.me / web session id
+  status      ChatStatus @default(ACTIVE)
+  escalatedTicketId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  messages    ChatbotMessage[]
+
+  @@index([leadId])
+  @@index([externalId])
+}
+
+enum ChatStatus {
+  ACTIVE
+  RESOLVED
+  ESCALATED
+  CLOSED
+}
+
+model ChatbotMessage {
+  id              String   @id @default(cuid())
+  conversationId  String
+  role            ChatRole
+  content         String
+  toolName        String?
+  toolInput       Json?
+  toolOutput      Json?
+  // Cache control marker on this message
+  cached          Boolean  @default(false)
+  tokensIn        Int?
+  tokensOut       Int?
+  tokensCacheRead Int?
+  tokensCacheWrite Int?
+  createdAt       DateTime @default(now())
+
+  conversation    ChatbotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+// =====================================================
+// FAQ (knowledge base for the bot)
+// =====================================================
+model FaqEntry {
+  id        String   @id @default(cuid())
+  category  String?
+  question  String
+  answer    String
+  keywords  String[] @default([])
+  views     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =====================================================
+// Ad Platforms (FB/IG/Google) — cached spend by campaign tag
+// =====================================================
+model AdSpend {
+  id        String   @id @default(cuid())
+  platform  AdPlatform
+  utmCampaign String
+  date      DateTime
+  spend     Float
+  clicks    Int      @default(0)
+  impressions Int    @default(0)
+  conversions Int    @default(0)
+  raw       Json?
+
+  @@unique([platform, utmCampaign, date])
+  @@index([utmCampaign])
+}
+
+enum AdPlatform {
+  FACEBOOK
+  INSTAGRAM
+  GOOGLE
+}
+
+// =====================================================
+// Reminders / Scheduled jobs metadata
+// =====================================================
+model ScheduledReminder {
+  id          String   @id @default(cuid())
+  leadId      String
+  channel     Channel
+  templateId  String?
+  payload     Json
+  runAt       DateTime
+  status      ReminderStatus @default(PENDING)
+  jobId       String?
+  createdAt   DateTime @default(now())
+
+  @@index([runAt])
+  @@index([status])
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  CANCELLED
+  FAILED
+}
