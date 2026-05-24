@@ -1,0 +1,61 @@
+{
+  "uid": "system-overview",
+  "title": "System Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["platform", "system"],
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "title": "CPU usage (per node)",
+      "type": "timeseries",
+      "targets": [{ "expr": "100 - avg by (instance)(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100" }],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100, "min": 0 } }
+    },
+    {
+      "id": 2, "title": "Memory usage",
+      "type": "timeseries",
+      "targets": [{ "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100" }],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100 } }
+    },
+    {
+      "id": 3, "title": "Disk free %",
+      "type": "timeseries",
+      "targets": [{ "expr": "(node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes) * 100" }],
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "percent" } }
+    },
+    {
+      "id": 4, "title": "Network I/O",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "rate(node_network_receive_bytes_total[5m])", "legendFormat": "rx {{device}}" },
+        { "expr": "rate(node_network_transmit_bytes_total[5m])", "legendFormat": "tx {{device}}" }
+      ],
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "Bps" } }
+    },
+    {
+      "id": 5, "title": "Postgres connections",
+      "type": "stat",
+      "targets": [{ "expr": "pg_stat_database_numbackends" }],
+      "gridPos": { "x": 0, "y": 16, "w": 6, "h": 6 }
+    },
+    {
+      "id": 6, "title": "Redis memory used",
+      "type": "stat",
+      "targets": [{ "expr": "redis_memory_used_bytes" }],
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "gridPos": { "x": 6, "y": 16, "w": 6, "h": 6 }
+    },
+    {
+      "id": 7, "title": "Requests per second (all apps)",
+      "type": "timeseries",
+      "targets": [{ "expr": "sum by (app)(rate(http_requests_total[5m]))" }],
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 6 }
+    }
+  ]
+}

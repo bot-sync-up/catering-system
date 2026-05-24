@@ -1,51 +1,58 @@
 #!/usr/bin/env bash
-# Postgres backup → encrypted dump → upload to Cloudflare R2
-# Usage: backup-postgres.sh [tag]   (tag defaults to "scheduled")
-set -euo pipefail
+# Encrypted, compressed daily Postgres backup -> S3/R2.
+# Retention is enforced server-side by bucket lifecycle rules.
+set -Eeuo pipefail
+IFS=$'\n\t'
 
-TAG="${1:-scheduled}"
-TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-BACKUP_DIR="${BACKUP_DIR:-/var/backups/postgres}"
-PG_CONTAINER="${PG_CONTAINER:-app-postgres}"
-DB_NAME="${POSTGRES_DB:-appdb}"
-DB_USER="${POSTGRES_USER:-appuser}"
-R2_BUCKET="${R2_BUCKET:?R2_BUCKET required}"
-R2_ENDPOINT="${R2_ENDPOINT:?R2_ENDPOINT required}"
-GPG_RECIPIENT="${BACKUP_GPG_RECIPIENT:?BACKUP_GPG_RECIPIENT required}"
-RETENTION_DAYS="${RETENTION_DAYS:-30}"
+# --- Required env -----------------------------------------------------
+: "${PGHOST:?}"; : "${PGUSER:?}"; : "${PGPASSWORD:?}"; : "${PGDATABASE:?}"
+: "${S3_BUCKET:?}"; : "${S3_ENDPOINT:?}"; : "${S3_ACCESS_KEY:?}"; : "${S3_SECRET_KEY:?}"
+: "${BACKUP_AGE_RECIPIENT:?}"        # age public key for encryption
+ENV_NAME="${ENV_NAME:-prod}"
+SLACK_WEBHOOK="${SLACK_WEBHOOK:-}"
 
-mkdir -p "$BACKUP_DIR"
-FILE="${BACKUP_DIR}/pg-${DB_NAME}-${TAG}-${TIMESTAMP}.sql.zst.gpg"
+TS=$(date -u +%Y%m%dT%H%M%SZ)
+NAME="${ENV_NAME}-${PGDATABASE}-${TS}.sql.zst.age"
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
 
-echo "[$(date -u +%FT%TZ)] starting backup → ${FILE}"
+notify() {
+  [ -n "$SLACK_WEBHOOK" ] || return 0
+  curl -sS -X POST "$SLACK_WEBHOOK" -H 'Content-Type: application/json' \
+    -d "{\"text\":\":floppy_disk: backup $1: \`$NAME\`\"}" >/dev/null || true
+}
 
-# Stream: pg_dump → zstd → gpg → file
-docker exec -i "$PG_CONTAINER" \
-  pg_dump -U "$DB_USER" -d "$DB_NAME" \
-    --format=custom --no-owner --no-privileges --compress=0 --verbose \
-  | zstd -T0 -19 \
-  | gpg --batch --yes --trust-model always \
-        --encrypt --recipient "$GPG_RECIPIENT" \
-        --output "$FILE"
+echo "[backup] pg_dump -> compress -> encrypt -> upload"
+pg_dump --format=custom --compress=0 --no-owner --no-privileges \
+        --serializable-deferrable --jobs=4 --file="$WORK/dump.pgc"
 
-SIZE="$(stat -c%s "$FILE")"
-SHA="$(sha256sum "$FILE" | awk '{print $1}')"
+zstd --long=27 -19 -T0 -q -f "$WORK/dump.pgc" -o "$WORK/dump.pgc.zst"
+age -r "$BACKUP_AGE_RECIPIENT" -o "$WORK/$NAME" "$WORK/dump.pgc.zst"
 
-echo "[$(date -u +%FT%TZ)] dump complete: size=${SIZE} sha256=${SHA}"
+# Upload with checksums + storage-class
+AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" \
+AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
+aws --endpoint-url "$S3_ENDPOINT" s3 cp "$WORK/$NAME" \
+  "s3://$S3_BUCKET/$ENV_NAME/daily/$NAME" \
+  --storage-class STANDARD_IA \
+  --metadata "sha256=$(sha256sum "$WORK/$NAME" | awk '{print $1}')"
 
-# Upload to R2 (using aws CLI configured for R2)
-aws --endpoint-url "$R2_ENDPOINT" s3 cp "$FILE" \
-    "s3://${R2_BUCKET}/postgres/$(date -u +%Y/%m)/$(basename "$FILE")" \
-    --metadata "sha256=${SHA},tag=${TAG}"
+# Weekly + monthly copy (server-side, no re-upload)
+DOW=$(date -u +%u)   # Monday=1
+DOM=$(date -u +%d)
+if [ "$DOW" = "7" ]; then
+  AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
+    aws --endpoint-url "$S3_ENDPOINT" s3 cp \
+      "s3://$S3_BUCKET/$ENV_NAME/daily/$NAME" \
+      "s3://$S3_BUCKET/$ENV_NAME/weekly/$NAME"
+fi
+if [ "$DOM" = "01" ]; then
+  AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
+    aws --endpoint-url "$S3_ENDPOINT" s3 cp \
+      "s3://$S3_BUCKET/$ENV_NAME/daily/$NAME" \
+      "s3://$S3_BUCKET/$ENV_NAME/monthly/$NAME" \
+      --storage-class GLACIER
+fi
 
-# Local retention
-find "$BACKUP_DIR" -type f -name "pg-*.gpg" -mtime "+${RETENTION_DAYS}" -delete
-
-# Remote retention (lifecycle policy preferred; this is a guardrail)
-aws --endpoint-url "$R2_ENDPOINT" s3 ls "s3://${R2_BUCKET}/postgres/" --recursive \
-  | awk -v cutoff="$(date -u -d "${RETENTION_DAYS} days ago" +%Y-%m-%d)" '$1 < cutoff {print $4}' \
-  | while read -r key; do
-      aws --endpoint-url "$R2_ENDPOINT" s3 rm "s3://${R2_BUCKET}/${key}"
-    done
-
-echo "[$(date -u +%FT%TZ)] backup uploaded & rotated"
+echo "[backup] done: $NAME"
+notify "OK"

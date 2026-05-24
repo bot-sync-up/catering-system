@@ -1,50 +1,48 @@
-# Secrets — ניהול סודות
+# ניהול Secrets
 
 ## עקרונות
+- אסור secret בכתב פתוח ב-Git, ב-`.env`, או ב-ENV של GitHub Actions בתור plaintext.
+- כל secret חי ב-secret store יחיד (Vault / AWS SM / Doppler / 1Password) - מקור אמת יחיד.
+- אפליקציה מקבלת secrets רק בזמן הרצה, דרך:
+  - Kubernetes: ExternalSecretsOperator -> Secret -> envFrom.
+  - Docker Compose: Vault Agent sidecar שכותב ל-`/run/secrets/`.
+  - CI/CD: OIDC -> Vault, ללא PAT סטטי.
+- Rotation אוטומטי כל 90 יום ל-JWT/AES, יומי ל-DB credentials דינמיים.
 
-1. **Vault הוא המקור היחיד.** אסור לשמור סודות ב-git, ב-.env מחוץ למפתח פיתוח, ב-CI vars לטווח ארוך, או ב-image layers.
-2. **Least privilege.** כל שירות מקבל policy עם גישה רק למה שהוא צריך (ראה `vault-policies.hcl`).
-3. **Rotation.** סודות קריטיים (JWT, DB password, webhook signing) מתחלפים אוטומטית כל 90 יום ע"י `rotation.sh`.
-4. **Audit.** Vault audit log מועבר ל-Loki. כל קריאה לסוד prod נשמרת.
+## אפשרויות (בחר אחת)
 
-## מבנה המפתחות
+### 1) HashiCorp Vault (מומלץ ל-self-host)
+- `vault-config.hcl` - cluster 3-node Raft + KMS auto-unseal.
+- `vault-policies.hcl` - מדיניות לפי תפקיד (platform-read, platform-rotate, ops-admin, ci-cd).
+- Auth methods: Kubernetes Service Account, GitHub OIDC, OIDC for humans (Google Workspace).
 
+### 2) AWS Secrets Manager
+- מתאים אם אתם כבר ב-AWS.
+- ExternalSecretsOperator עם `SecretStore` מסוג `aws`.
+- Automatic rotation דרך Lambda template.
+
+### 3) Doppler
+- SaaS, חינמי לקטנים. Integration ישיר ל-Vercel/GitHub/k8s.
+- מספק `doppler run --` wrapper.
+
+### 4) 1Password (לאדמינים)
+- 1Password Connect Server רץ ב-k8s.
+- מתאים לסודות אנושיים (admin passwords, recovery keys), פחות לאפליקציה.
+
+## אסור (Enforced ע"י gitleaks + pre-commit)
+- `JWT_SECRET=...` ב-`.env` שמתחייב.
+- `password` בקוד.
+- token ב-comments.
+
+## Rotation
 ```
-secret/app/prod/
-  ├── jwt-secret
-  ├── session-secret
-  ├── db-password
-  ├── redis-password
-  ├── stripe-secret
-  ├── tranzila-credentials
-  ├── twilio-token
-  ├── sendgrid-api-key
-  └── webhook-signing-key
-
-secret/app/staging/  (same shape)
+tsx deployment/secrets/rotate-secrets.ts --key auth/jwt
+tsx deployment/secrets/rotate-secrets.ts --key auth/aes
 ```
+מערכת תייצר `previousKid` שאפליקציה משתמשת בו לאימות JWT ישנים עד תוקפם.
 
-## נהלים
-
-### הוספת סוד חדש
-1. PR שמוסיף את שם המפתח ל-`vault-policies.hcl` תחת ה-policy הרלוונטי.
-2. אחרי merge: `vault kv put secret/app/prod/<name> value=<...>`.
-3. הפניה בקוד: דרך SDK של Vault, **לא** דרך `process.env`.
-
-### Rotation ידנית
-```bash
-VAULT_ADDR=https://vault.example.co.il VAULT_TOKEN=<token> \
-  ./rotation.sh prod
-```
-
-### Emergency revoke
-```bash
-vault token revoke -mode=path auth/token/create
-vault kv put secret/app/prod/db-password value="$(openssl rand -base64 48)"
-docker compose kill -s SIGTERM gateway worker
-```
-
-## CI
-
-CI מקבל token עם `ci-write` policy בלבד — יכול לכתוב staging, **לא** prod.
-Token ב-GitHub Actions Secret בשם `VAULT_TOKEN_CI`, TTL = 1h, מתחדש דרך AppRole.
+## On-call: שחרור secret חירום (break-glass)
+1. כניסה ל-Vault עם MFA.
+2. `vault token create -policy=ops-admin -ttl=1h`.
+3. כל פעולה נרשמת ב-audit log.
+4. ב-15 דקות הבאות הוצאת secrets רותציה אוטומטית.

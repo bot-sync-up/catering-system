@@ -1,0 +1,43 @@
+# Multi-stage Dockerfile for Next.js apps in a Turborepo/pnpm monorepo
+# Usage: docker build --build-arg APP_NAME=admin -f Dockerfile.nextjs .
+ARG NODE_VERSION=20.18.0-alpine
+
+# ---------- Stage 1: deps ----------
+FROM node:${NODE_VERSION} AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /repo
+ENV CI=1 PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json* ./
+COPY apps ./apps
+COPY packages ./packages
+RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile
+
+# ---------- Stage 2: builder ----------
+FROM node:${NODE_VERSION} AS builder
+ARG APP_NAME
+ENV CI=1 NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production
+WORKDIR /repo
+RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+COPY --from=deps /repo/node_modules ./node_modules
+COPY --from=deps /repo/apps ./apps
+COPY --from=deps /repo/packages ./packages
+COPY . .
+RUN pnpm --filter "@apps/${APP_NAME}" build
+
+# ---------- Stage 3: runner (standalone) ----------
+FROM node:${NODE_VERSION} AS runner
+ARG APP_NAME
+ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1
+WORKDIR /app
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+# Copy standalone build
+COPY --from=builder --chown=nextjs:nodejs /repo/apps/${APP_NAME}/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /repo/apps/${APP_NAME}/.next/static ./apps/${APP_NAME}/.next/static
+COPY --from=builder --chown=nextjs:nodejs /repo/apps/${APP_NAME}/public ./apps/${APP_NAME}/public
+USER nextjs
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD wget --spider -q http://localhost:3000/api/health || exit 1
+CMD ["node", "apps/${APP_NAME}/server.js"]

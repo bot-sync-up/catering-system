@@ -1,0 +1,24 @@
+{{- range $app := .Values.apps }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $app.name }}
+  annotations:
+    {{- toYaml $.Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  tls:
+    - hosts: ["{{ $app.subdomain }}.{{ $.Values.global.domain }}"]
+      secretName: {{ $.Values.ingress.tlsSecret }}
+  rules:
+    - host: "{{ $app.subdomain }}.{{ $.Values.global.domain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $app.name }}
+                port: { number: 80 }
+{{- end }}

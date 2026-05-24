@@ -1,0 +1,15 @@
+global:
+  domain: dev.example.com
+image:
+  tag: dev-latest
+hpa:
+  minReplicas: 1
+  maxReplicas: 2
+postgres:
+  storage: 10Gi
+redis:
+  storage: 1Gi
+resources:
+  default:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }

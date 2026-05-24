@@ -1,91 +1,360 @@
+# Production docker-compose stack
+# Includes: Postgres 16, Redis 7, Nginx, 20 Next.js apps, worker, BullMQ board, monitoring
 version: "3.9"
 
-# Production overrides — apply with:
-# docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+x-app-base: &app-base
+  restart: unless-stopped
+  networks: [internal]
+  env_file: ../secrets/.env.prod
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "50m"
+      max-file: "5"
+
+x-healthcheck-http: &healthcheck-http
+  test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+  interval: 30s
+  timeout: 5s
+  retries: 5
+  start_period: 40s
+
+networks:
+  internal:
+    driver: bridge
+  edge:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  postgres-wal:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  uptime-kuma-data:
+  letsencrypt:
+  certbot-www:
 
 services:
+  # --------- Data layer ---------
   postgres:
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"
-          memory: 4G
-        reservations:
-          cpus: "1.0"
-          memory: 2G
-    command:
-      - "postgres"
-      - "-c"
-      - "max_connections=200"
-      - "-c"
-      - "shared_buffers=1GB"
-      - "-c"
-      - "effective_cache_size=3GB"
-      - "-c"
-      - "maintenance_work_mem=256MB"
-      - "-c"
-      - "wal_level=replica"
-      - "-c"
-      - "max_wal_senders=4"
-      - "-c"
-      - "archive_mode=on"
-      - "-c"
-      - "archive_command=/usr/local/bin/wal-archive.sh %p %f"
+    image: postgres:16-alpine
+    restart: unless-stopped
+    networks: [internal]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - postgres-wal:/var/lib/postgresql/wal
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "127.0.0.1:5432:5432"
 
   redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks: [internal]
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1 --save 300 10 --save 60 10000
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  # --------- Edge / TLS ---------
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    networks: [internal, edge]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.d:/etc/nginx/conf.d:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    depends_on:
+      - app-web
+      - app-admin
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    networks: [edge]
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do certbot renew --webroot -w /var/www/certbot --quiet;
+      sleep 12h & wait $${!}; done;"
+
+  # --------- 20 application services ---------
+  app-web:
+    <<: *app-base
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.nextjs
+      args: { APP_NAME: web }
+    healthcheck: *healthcheck-http
     deploy:
       resources:
-        limits:
-          cpus: "1.0"
-          memory: 1G
+        limits: { cpus: "1.0", memory: 1024M }
 
-  gateway:
+  app-admin:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: admin } }
+    healthcheck: *healthcheck-http
+
+  app-driver:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: driver } }
+    healthcheck: *healthcheck-http
+
+  app-kitchen:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: kitchen } }
+    healthcheck: *healthcheck-http
+
+  app-pos:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: pos } }
+    healthcheck: *healthcheck-http
+
+  app-customer:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: customer } }
+    healthcheck: *healthcheck-http
+
+  app-merchant:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: merchant } }
+    healthcheck: *healthcheck-http
+
+  app-analytics:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: analytics } }
+    healthcheck: *healthcheck-http
+
+  app-loyalty:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: loyalty } }
+    healthcheck: *healthcheck-http
+
+  app-inventory:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: inventory } }
+    healthcheck: *healthcheck-http
+
+  app-crm:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: crm } }
+    healthcheck: *healthcheck-http
+
+  app-marketing:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: marketing } }
+    healthcheck: *healthcheck-http
+
+  app-reports:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: reports } }
+    healthcheck: *healthcheck-http
+
+  app-support:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: support } }
+    healthcheck: *healthcheck-http
+
+  app-finance:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: finance } }
+    healthcheck: *healthcheck-http
+
+  app-hr:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: hr } }
+    healthcheck: *healthcheck-http
+
+  app-procurement:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: procurement } }
+    healthcheck: *healthcheck-http
+
+  app-quality:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: quality } }
+    healthcheck: *healthcheck-http
+
+  app-compliance:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: compliance } }
+    healthcheck: *healthcheck-http
+
+  app-api-gateway:
+    <<: *app-base
+    build: { context: ../.., dockerfile: deployment/docker/Dockerfile.nextjs, args: { APP_NAME: api-gateway } }
+    healthcheck: *healthcheck-http
+
+  # --------- Background workers ---------
+  worker:
+    <<: *app-base
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.worker
     deploy:
       replicas: 3
       resources:
-        limits:
-          cpus: "1.0"
-          memory: 1G
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
+        limits: { cpus: "1.0", memory: 1024M }
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:9100/healthz',r=>process.exit(r.statusCode===200?0:1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  bullmq-board:
+    <<: *app-base
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.bullboard
     environment:
-      LOG_LEVEL: warn
-      RATE_LIMIT_MAX: 100
+      BOARD_USERNAME: ${BOARD_USERNAME}
+      BOARD_PASSWORD: ${BOARD_PASSWORD}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
-  next:
-    deploy:
-      replicas: 2
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 1G
-
-  worker:
-    deploy:
-      replicas: 4
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 2G
-
-  nginx:
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-
+  # --------- Monitoring stack ---------
   prometheus:
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 1G
+    image: prom/prometheus:v2.55.0
+    restart: unless-stopped
+    networks: [internal]
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/alerts:/etc/prometheus/alerts:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-lifecycle
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
 
   grafana:
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
+    image: grafana/grafana:11.3.0
+    restart: unless-stopped
+    networks: [internal]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: https://grafana.${DOMAIN}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+
+  loki:
+    image: grafana/loki:3.2.0
+    restart: unless-stopped
+    networks: [internal]
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ../monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      interval: 30s
+
+  promtail:
+    image: grafana/promtail:3.2.0
+    restart: unless-stopped
+    networks: [internal]
+    volumes:
+      - ../monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    networks: [internal]
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    restart: unless-stopped
+    networks: [internal]
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    restart: unless-stopped
+    networks: [internal]
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    networks: [internal, edge]
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data

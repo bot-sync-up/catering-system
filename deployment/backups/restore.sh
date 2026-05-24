@@ -1,88 +1,52 @@
 #!/usr/bin/env bash
-# Postgres restore with PITR support
+# Restore Postgres with optional Point-In-Time Recovery using WAL.
 # Usage:
-#   restore.sh latest                       — restore most recent dump
-#   restore.sh file <path-or-r2-key>        — restore specific dump
-#   restore.sh pitr <YYYY-MM-DDTHH:MM:SSZ>  — point-in-time restore (requires WAL archive)
-set -euo pipefail
+#   ./restore.sh --backup s3://.../daily/prod-appdb-20251101T030000Z.sql.zst.age
+#   ./restore.sh --backup s3://... --target-time "2025-11-01 04:35:00 UTC"
+set -Eeuo pipefail
 
-MODE="${1:?usage: restore.sh latest|file|pitr ...}"
-PG_CONTAINER="${PG_CONTAINER:-app-postgres}"
-DB_NAME="${POSTGRES_DB:-appdb}"
-DB_USER="${POSTGRES_USER:-appuser}"
-R2_BUCKET="${R2_BUCKET:?R2_BUCKET required}"
-R2_ENDPOINT="${R2_ENDPOINT:?R2_ENDPOINT required}"
-RESTORE_DIR="${RESTORE_DIR:-/var/restore}"
-mkdir -p "$RESTORE_DIR"
+BACKUP=""
+TARGET_TIME=""
+TARGET_DB="${PGDATABASE:-appdb_restore}"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --backup) BACKUP="$2"; shift 2 ;;
+    --target-time) TARGET_TIME="$2"; shift 2 ;;
+    --target-db)   TARGET_DB="$2";   shift 2 ;;
+    *) echo "unknown flag $1"; exit 2 ;;
+  esac
+done
+[ -n "$BACKUP" ] || { echo "missing --backup"; exit 2; }
 
-confirm() {
-  read -r -p "RESTORE will OVERWRITE database '${DB_NAME}'. Type the DB name to confirm: " ans
-  [[ "$ans" == "$DB_NAME" ]] || { echo "aborted"; exit 1; }
-}
+: "${PGHOST:?}"; : "${PGUSER:?}"; : "${PGPASSWORD:?}"
+: "${S3_ENDPOINT:?}"; : "${S3_ACCESS_KEY:?}"; : "${S3_SECRET_KEY:?}"
+: "${BACKUP_AGE_IDENTITY:?}"   # path to age identity file
 
-fetch_remote() {
-  local key="$1" dest="$2"
-  aws --endpoint-url "$R2_ENDPOINT" s3 cp "s3://${R2_BUCKET}/${key}" "$dest"
-}
+WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 
-decrypt_and_pipe() {
-  local file="$1"
-  gpg --batch --yes --decrypt "$file" | zstd -d -c
-}
+echo "[restore] downloading $BACKUP"
+AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
+  aws --endpoint-url "$S3_ENDPOINT" s3 cp "$BACKUP" "$WORK/dump.age"
 
-case "$MODE" in
-  latest)
-    confirm
-    KEY="$(aws --endpoint-url "$R2_ENDPOINT" s3 ls "s3://${R2_BUCKET}/postgres/" --recursive \
-            | sort | tail -1 | awk '{print $4}')"
-    [[ -n "$KEY" ]] || { echo "no backup found"; exit 2; }
-    FILE="${RESTORE_DIR}/$(basename "$KEY")"
-    fetch_remote "$KEY" "$FILE"
-    decrypt_and_pipe "$FILE" | docker exec -i "$PG_CONTAINER" \
-      pg_restore -U "$DB_USER" -d "$DB_NAME" --clean --if-exists --no-owner
-    ;;
+echo "[restore] decrypt + decompress"
+age -d -i "$BACKUP_AGE_IDENTITY" -o "$WORK/dump.zst" "$WORK/dump.age"
+zstd -d -q -f "$WORK/dump.zst" -o "$WORK/dump.pgc"
 
-  file)
-    confirm
-    SRC="${2:?file path or R2 key required}"
-    if [[ -f "$SRC" ]]; then
-      FILE="$SRC"
-    else
-      FILE="${RESTORE_DIR}/$(basename "$SRC")"
-      fetch_remote "$SRC" "$FILE"
-    fi
-    decrypt_and_pipe "$FILE" | docker exec -i "$PG_CONTAINER" \
-      pg_restore -U "$DB_USER" -d "$DB_NAME" --clean --if-exists --no-owner
-    ;;
+echo "[restore] creating target DB: $TARGET_DB"
+createdb "$TARGET_DB"
+pg_restore --jobs=4 --no-owner --no-privileges --dbname="$TARGET_DB" "$WORK/dump.pgc"
 
-  pitr)
-    confirm
-    TARGET_TIME="${2:?target time required (ISO 8601)}"
-    echo "Stopping postgres for PITR..."
-    docker compose stop postgres
-    docker run --rm -v app_postgres-data:/var/lib/postgresql/data alpine \
-      sh -c "rm -rf /var/lib/postgresql/data/*"
-    # base backup restore (assumes base.tar in R2)
-    aws --endpoint-url "$R2_ENDPOINT" s3 cp \
-      "s3://${R2_BUCKET}/postgres/base/latest.tar.zst" - \
-      | zstd -d \
-      | docker run --rm -i -v app_postgres-data:/var/lib/postgresql/data alpine \
-          tar -x -C /var/lib/postgresql/data
-    # recovery.signal + restore_command
-    docker run --rm -v app_postgres-data:/var/lib/postgresql/data alpine sh -c "
-      touch /var/lib/postgresql/data/recovery.signal
-      cat >> /var/lib/postgresql/data/postgresql.auto.conf <<EOF
-recovery_target_time = '${TARGET_TIME}'
-restore_command = 'aws --endpoint-url ${R2_ENDPOINT} s3 cp s3://${R2_BUCKET}/postgres/wal/%f %p'
-EOF"
-    docker compose up -d postgres
-    echo "PITR initiated. Monitor logs until recovery completes."
-    ;;
+if [ -n "$TARGET_TIME" ]; then
+  echo "[restore] applying WAL up to $TARGET_TIME"
+  # Requires WAL archive accessible via $WAL_ARCHIVE
+  : "${WAL_ARCHIVE:?}"
+  pg_ctl -D "$PGDATA" stop -m fast
+  cat > "$PGDATA/recovery.signal" <<EOF
+restore_command = 'cp $WAL_ARCHIVE/%f %p'
+recovery_target_time = '$TARGET_TIME'
+recovery_target_action = 'promote'
+EOF
+  pg_ctl -D "$PGDATA" start
+fi
 
-  *)
-    echo "Unknown mode: $MODE" >&2
-    exit 1
-    ;;
-esac
-
-echo "Restore done."
+echo "[restore] OK"

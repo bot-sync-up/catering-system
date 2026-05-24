@@ -1,0 +1,19 @@
+# BullMQ board (admin dashboard for queues)
+ARG NODE_VERSION=20.18.0-alpine
+FROM node:${NODE_VERSION} AS deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+COPY apps/bullboard/package.json apps/bullboard/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+FROM node:${NODE_VERSION} AS runner
+ENV NODE_ENV=production PORT=3000
+WORKDIR /app
+RUN addgroup -g 1001 -S nodejs && adduser -S board -u 1001
+COPY --from=deps --chown=board:nodejs /app/node_modules ./node_modules
+COPY --chown=board:nodejs apps/bullboard ./
+USER board
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget --spider -q http://localhost:3000/healthz || exit 1
+CMD ["node", "server.js"]

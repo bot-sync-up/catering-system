@@ -1,0 +1,74 @@
+{{- range $app := .Values.apps }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $app.name }}
+  labels:
+    {{- include "platform.labels" (dict "name" $app.name "Release" $.Release "Chart" $.Chart) | nindent 4 }}
+spec:
+  replicas: {{ $app.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $app.name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $app.name }}
+        app.kubernetes.io/part-of: platform
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/api/metrics"
+    spec:
+      imagePullSecrets:
+        {{- toYaml $.Values.global.imagePullSecrets | nindent 8 }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: app
+          image: "{{ $.Values.global.imageRegistry }}/{{ $app.name }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - configMapRef: { name: platform-config }
+            - secretRef:    { name: {{ $.Values.secrets.externalSecretsRef }} }
+          env:
+            - name: APP_NAME
+              value: {{ $app.name }}
+          readinessProbe:
+            httpGet: { path: /api/health, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/health, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 5
+          resources:
+            {{- toYaml $.Values.resources.default | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: cache, mountPath: /app/.next/cache }
+      volumes:
+        - { name: tmp,   emptyDir: {} }
+        - { name: cache, emptyDir: {} }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: {{ $app.name }} }
+{{- end }}

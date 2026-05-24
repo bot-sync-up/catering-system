@@ -1,0 +1,11 @@
+global:
+  domain: staging.example.com
+image:
+  tag: staging-latest
+hpa:
+  minReplicas: 1
+  maxReplicas: 4
+postgres:
+  storage: 50Gi
+redis:
+  storage: 5Gi

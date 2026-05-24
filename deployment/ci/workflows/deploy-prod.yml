@@ -1,0 +1,115 @@
+name: Deploy / Production
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag (e.g. v1.4.2)"
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    environment: production-approval   # manual approval gate
+    steps:
+      - run: echo "Approved by ${{ github.actor }} for ${{ inputs.release_tag }}"
+
+  pre-checks:
+    runs-on: ubuntu-latest
+    needs: guard
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ inputs.release_tag }} }
+      - name: Verify staging is green
+        run: |
+          STATUS=$(curl -fsSL https://status.example.com/api/staging/health | jq -r .status)
+          [ "$STATUS" = "green" ] || (echo "Staging not green"; exit 1)
+      - name: Backup database
+        run: bash deployment/migrations/pre-deploy-check.sh production
+
+  build-push:
+    runs-on: ubuntu-latest
+    needs: pre-checks
+    strategy:
+      matrix:
+        app:
+          - web
+          - admin
+          - driver
+          - kitchen
+          - pos
+          - customer
+          - merchant
+          - analytics
+          - loyalty
+          - inventory
+          - crm
+          - marketing
+          - reports
+          - support
+          - finance
+          - hr
+          - procurement
+          - quality
+          - compliance
+          - api-gateway
+          - worker
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ inputs.release_tag }} }
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deployment/docker/Dockerfile.nextjs
+          build-args: APP_NAME=${{ matrix.app }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.app }}:${{ inputs.release_tag }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.app }}:prod-latest
+          provenance: true
+          sbom: true
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-push
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ inputs.release_tag }} }
+      - uses: azure/setup-helm@v4
+        with: { version: v3.16.0 }
+      - run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.PROD_KUBECONFIG }}" | base64 -d > ~/.kube/config
+      - name: Run DB migrations (one-shot Job)
+        run: kubectl apply -f deployment/migrations/migrate-job.yaml -n production
+      - name: Helm upgrade (canary 10% -> 100%)
+        run: |
+          helm upgrade --install platform deployment/k8s/chart \
+            --namespace production \
+            -f deployment/k8s/values/prod.yaml \
+            --set image.tag=${{ inputs.release_tag }} \
+            --atomic --timeout 15m
+      - name: Smoke tests
+        run: pnpm test:smoke --baseUrl=https://www.example.com
+      - name: Notify
+        if: always()
+        run: |
+          curl -X POST ${{ secrets.SLACK_DEPLOY_WEBHOOK }} \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\":\"Prod deploy ${{ inputs.release_tag }} -> ${{ job.status }}\"}"
