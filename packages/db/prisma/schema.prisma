@@ -242,28 +242,6 @@ enum VehicleStatus {
 }
 
 // =============================================================================
-// TENANT (multi-tenant root)
-// =============================================================================
-
-model Tenant {
-  id          String   @id @default(uuid()) @db.Uuid
-  slug        String   @unique
-  name        String
-  hebrewName  String?  @map("hebrew_name")
-  domain      String?  @unique
-  timezone    String   @default("Asia/Jerusalem")
-  locale      String   @default("he-IL")
-  currency    String   @default("ILS")
-  vatRate     Decimal  @default(18) @map("vat_rate") @db.Decimal(5, 2)
-  settings    Json     @default("{}")
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("tenants")
-}
-
-// =============================================================================
 // IDENTITY & ACCESS
 // =============================================================================
 
@@ -1380,7 +1358,6 @@ model Invoice {
   category        FinancialCategory @default(OFFICIAL)
   status          InvoiceStatus     @default(DRAFT)
   amount          Decimal           @db.Decimal(14, 2)
-  vatRate         Decimal           @default(18) @map("vat_rate") @db.Decimal(5, 2)
   taxAmount       Decimal           @default(0) @map("tax_amount") @db.Decimal(14, 2)
   discount        Decimal           @default(0) @db.Decimal(14, 2)
   totalAmount     Decimal           @map("total_amount") @db.Decimal(14, 2)

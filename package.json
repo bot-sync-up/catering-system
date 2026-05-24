@@ -1,22 +1,14 @@
 {
-  "name": "catering-platform",
-  "private": true,
+  "name": "aneh-hashoel-monorepo",
   "version": "0.1.0",
-  "description": "פלטפורמת קייטרינג - מונורפו עם event-bus ו-integration-adapters",
-  "packageManager": "pnpm@9.0.0",
+  "private": true,
+  "description": "Monorepo for the 'Aneh et HaShoel' platform.",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck"
-  },
-  "devDependencies": {
-    "typescript": "^5.4.5",
-    "vitest": "^1.6.0",
-    "@types/node": "^20.12.0"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=9.0.0"
+    "db:generate": "npm -w @aneh-hashoel/db run generate",
+    "db:migrate": "npm -w @aneh-hashoel/db run migrate:deploy",
+    "db:seed": "npm -w @aneh-hashoel/db run db:seed"
   }
 }
