@@ -1,0 +1,17 @@
+{
+  "menu": "תפריט",
+  "home": "בית",
+  "scan_qr": "סריקת QR",
+  "notifications": "התראות",
+  "no_notifications": "אין התראות חדשות",
+  "pull_to_refresh": "משוך לרענון",
+  "offline": "אין חיבור לאינטרנט",
+  "reconnecting": "מתחבר מחדש...",
+  "tap_to_retry": "לחץ לניסיון נוסף",
+  "permission_camera": "נדרשת הרשאה למצלמה",
+  "permission_location": "נדרשת הרשאה למיקום",
+  "permission_notifications": "נדרשת הרשאה להתראות",
+  "app_update_available": "עדכון לאפליקציה זמין",
+  "update_now": "עדכן עכשיו",
+  "later": "מאוחר יותר"
+}

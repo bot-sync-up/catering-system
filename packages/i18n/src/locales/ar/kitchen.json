@@ -1,0 +1,25 @@
+{
+  "title": "المطبخ",
+  "active_orders": "الطلبات النشطة",
+  "preparation_time": "وقت التحضير",
+  "minutes_zero": "صفر دقائق",
+  "minutes_one": "دقيقة",
+  "minutes_two": "دقيقتان",
+  "minutes_few": "{{count}} دقائق",
+  "minutes_many": "{{count}} دقيقة",
+  "minutes_other": "{{count}} دقيقة",
+  "start_preparation": "ابدأ التحضير",
+  "mark_ready": "وسم كجاهز",
+  "send_to_delivery": "إرسال للتوصيل",
+  "kitchen_station": "محطة المطبخ",
+  "stations": {
+    "grill": "مشواة",
+    "fryer": "قلي",
+    "salads": "سلطات",
+    "cold": "أطباق باردة",
+    "drinks": "مشروبات",
+    "desserts": "حلويات"
+  },
+  "rush_hour": "ساعة الذروة",
+  "all_clear": "كل شيء جاهز"
+}

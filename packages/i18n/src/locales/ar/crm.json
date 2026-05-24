@@ -1,0 +1,22 @@
+{
+  "title": "إدارة الزبائن",
+  "customer": "زبون",
+  "customers": "زبائن",
+  "leads": "عملاء محتملون",
+  "phone": "هاتف",
+  "email": "بريد إلكتروني",
+  "address": "عنوان",
+  "city": "مدينة",
+  "birthday": "عيد ميلاد",
+  "tags": "وسوم",
+  "notes": "ملاحظات",
+  "last_order": "آخر طلب",
+  "total_spent": "إجمالي المصروفات",
+  "loyalty_points": "نقاط الولاء",
+  "vip": "VIP",
+  "add_customer": "إضافة زبون",
+  "edit_customer": "تعديل زبون",
+  "delete_customer": "حذف زبون",
+  "search_customer": "بحث عن زبون",
+  "no_customers": "لا يوجد زبائن"
+}

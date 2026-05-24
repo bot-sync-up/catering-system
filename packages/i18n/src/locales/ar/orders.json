@@ -1,0 +1,32 @@
+{
+  "title": "الطلبات",
+  "new_order": "طلب جديد",
+  "order_number": "رقم الطلب",
+  "customer": "الزبون",
+  "items": "المنتجات",
+  "total": "المجموع",
+  "status": {
+    "pending": "قيد الانتظار",
+    "confirmed": "مؤكد",
+    "in_kitchen": "في المطبخ",
+    "ready": "جاهز",
+    "on_the_way": "في الطريق",
+    "delivered": "تم التسليم",
+    "cancelled": "ملغى"
+  },
+  "delivery_address": "عنوان التوصيل",
+  "delivery_time": "وقت التوصيل",
+  "notes": "ملاحظات",
+  "payment_method": "طريقة الدفع",
+  "subtotal": "المجموع الفرعي",
+  "tax": "الضريبة",
+  "discount": "الخصم",
+  "tip": "بقشيش",
+  "no_orders": "لا توجد طلبات للعرض",
+  "orders_count_zero": "لا توجد طلبات",
+  "orders_count_one": "طلب واحد",
+  "orders_count_two": "طلبان",
+  "orders_count_few": "{{count}} طلبات",
+  "orders_count_many": "{{count}} طلبا",
+  "orders_count_other": "{{count}} طلب"
+}

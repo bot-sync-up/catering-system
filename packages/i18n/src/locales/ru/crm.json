@@ -1,0 +1,22 @@
+{
+  "title": "CRM",
+  "customer": "Клиент",
+  "customers": "Клиенты",
+  "leads": "Лиды",
+  "phone": "Телефон",
+  "email": "Эл. почта",
+  "address": "Адрес",
+  "city": "Город",
+  "birthday": "День рождения",
+  "tags": "Метки",
+  "notes": "Заметки",
+  "last_order": "Последний заказ",
+  "total_spent": "Всего потрачено",
+  "loyalty_points": "Бонусные баллы",
+  "vip": "VIP",
+  "add_customer": "Добавить клиента",
+  "edit_customer": "Редактировать клиента",
+  "delete_customer": "Удалить клиента",
+  "search_customer": "Найти клиента",
+  "no_customers": "Нет клиентов"
+}

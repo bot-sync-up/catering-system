@@ -1,0 +1,29 @@
+{
+  "title": "הזמנות",
+  "new_order": "הזמנה חדשה",
+  "order_number": "מספר הזמנה",
+  "customer": "לקוח",
+  "items": "פריטים",
+  "total": "סה\"כ",
+  "status": {
+    "pending": "ממתינה",
+    "confirmed": "אושרה",
+    "in_kitchen": "במטבח",
+    "ready": "מוכן",
+    "on_the_way": "בדרך",
+    "delivered": "נמסרה",
+    "cancelled": "בוטלה"
+  },
+  "delivery_address": "כתובת למשלוח",
+  "delivery_time": "זמן משלוח",
+  "notes": "הערות",
+  "payment_method": "אמצעי תשלום",
+  "subtotal": "ביניים",
+  "tax": "מע\"מ",
+  "discount": "הנחה",
+  "tip": "טיפ",
+  "no_orders": "אין הזמנות להצגה",
+  "orders_count_one": "הזמנה אחת",
+  "orders_count_two": "שתי הזמנות",
+  "orders_count_other": "{{count}} הזמנות"
+}

@@ -1,0 +1,44 @@
+{
+  "name": "@app/i18n",
+  "version": "0.1.0",
+  "description": "תמיכת רב-לשונית (he/en/ar/ru/am) כולל RTL, formatting, plurals וכלי תרגום",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./rtl": "./dist/RTLProvider.js",
+    "./tools/*": "./dist/tools/*.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "extract": "tsx src/tools/extract-keys.ts",
+    "missing": "tsx src/tools/find-missing.ts",
+    "validate": "tsx src/tools/validate-completeness.ts",
+    "translate": "tsx src/tools/auto-translate.ts"
+  },
+  "dependencies": {
+    "i18next": "^23.11.0",
+    "i18next-browser-languagedetector": "^7.2.0",
+    "i18next-http-backend": "^2.5.0",
+    "react": "^18.3.0",
+    "react-i18next": "^14.1.0",
+    "stylis": "^4.3.0",
+    "stylis-plugin-rtl": "^2.1.1"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "@types/node": "^20.12.0",
+    "@types/react": "^18.3.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "title": "Orders",
+  "new_order": "New order",
+  "order_number": "Order number",
+  "customer": "Customer",
+  "items": "Items",
+  "total": "Total",
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "in_kitchen": "In kitchen",
+    "ready": "Ready",
+    "on_the_way": "On the way",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled"
+  },
+  "delivery_address": "Delivery address",
+  "delivery_time": "Delivery time",
+  "notes": "Notes",
+  "payment_method": "Payment method",
+  "subtotal": "Subtotal",
+  "tax": "Tax",
+  "discount": "Discount",
+  "tip": "Tip",
+  "no_orders": "No orders to display",
+  "orders_count_one": "1 order",
+  "orders_count_other": "{{count}} orders"
+}

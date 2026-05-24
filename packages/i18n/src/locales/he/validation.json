@@ -1,0 +1,18 @@
+{
+  "required": "שדה חובה",
+  "email_invalid": "כתובת אימייל לא תקינה",
+  "phone_invalid": "מספר טלפון לא תקין",
+  "phone_il_invalid": "מספר טלפון ישראלי לא תקין (10 ספרות)",
+  "min_length": "מינימום {{min}} תווים",
+  "max_length": "מקסימום {{max}} תווים",
+  "min_value": "ערך מינימלי: {{min}}",
+  "max_value": "ערך מקסימלי: {{max}}",
+  "passwords_dont_match": "הסיסמאות אינן תואמות",
+  "password_too_weak": "הסיסמה חלשה — נדרשת אות גדולה, ספרה ו-{{min}} תווים",
+  "id_invalid": "מספר תעודת זהות לא תקין",
+  "credit_card_invalid": "מספר כרטיס אשראי לא תקין",
+  "date_invalid": "תאריך לא תקין",
+  "date_must_be_future": "התאריך חייב להיות בעתיד",
+  "date_must_be_past": "התאריך חייב להיות בעבר",
+  "url_invalid": "כתובת URL לא תקינה"
+}

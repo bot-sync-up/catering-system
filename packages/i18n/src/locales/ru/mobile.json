@@ -1,0 +1,17 @@
+{
+  "menu": "Меню",
+  "home": "Главная",
+  "scan_qr": "Сканировать QR",
+  "notifications": "Уведомления",
+  "no_notifications": "Нет новых уведомлений",
+  "pull_to_refresh": "Потяните для обновления",
+  "offline": "Нет подключения к интернету",
+  "reconnecting": "Переподключение...",
+  "tap_to_retry": "Нажмите, чтобы повторить",
+  "permission_camera": "Требуется разрешение камеры",
+  "permission_location": "Требуется разрешение геолокации",
+  "permission_notifications": "Требуется разрешение уведомлений",
+  "app_update_available": "Доступно обновление приложения",
+  "update_now": "Обновить сейчас",
+  "later": "Позже"
+}

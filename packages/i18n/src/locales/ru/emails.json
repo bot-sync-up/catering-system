@@ -1,0 +1,13 @@
+{
+  "greeting": "Здравствуйте, {{name}}!",
+  "signoff": "С уважением,\nКоманда {{company}}",
+  "order_confirmation_subject": "Подтверждение заказа #{{order_number}}",
+  "order_confirmation_intro": "Спасибо за заказ! Ваши данные:",
+  "order_shipped_subject": "Ваш заказ отправлен",
+  "order_delivered_subject": "Ваш заказ доставлен",
+  "password_reset_subject": "Сброс пароля",
+  "password_reset_body": "Нажмите на ссылку, чтобы сбросить пароль. Ссылка действительна {{hours}} ч.",
+  "welcome_subject": "Добро пожаловать в {{company}}!",
+  "footer_unsubscribe": "Если вы больше не хотите получать эти письма, нажмите здесь для отписки",
+  "footer_address": "{{company}} | {{address}}"
+}

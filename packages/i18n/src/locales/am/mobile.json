@@ -1,0 +1,17 @@
+{
+  "menu": "ሜኑ",
+  "home": "መነሻ",
+  "scan_qr": "QR ቃኝ",
+  "notifications": "ማሳወቂያዎች",
+  "no_notifications": "አዲስ ማሳወቂያዎች የሉም",
+  "pull_to_refresh": "ለመንዝራት ይጎትቱ",
+  "offline": "የበይነመረብ ግንኙነት የለም",
+  "reconnecting": "በመገናኘት ላይ...",
+  "tap_to_retry": "እንደገና ለመሞከር ይንኩ",
+  "permission_camera": "የካሜራ ፍቃድ ያስፈልጋል",
+  "permission_location": "የመገኛ ቦታ ፍቃድ ያስፈልጋል",
+  "permission_notifications": "የማሳወቂያ ፍቃድ ያስፈልጋል",
+  "app_update_available": "የመተግበሪያ ዝመና ይገኛል",
+  "update_now": "አሁን ያዘምኑ",
+  "later": "በኋላ"
+}

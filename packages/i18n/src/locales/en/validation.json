@@ -1,0 +1,18 @@
+{
+  "required": "Required field",
+  "email_invalid": "Invalid email address",
+  "phone_invalid": "Invalid phone number",
+  "phone_il_invalid": "Invalid Israeli phone number (10 digits)",
+  "min_length": "Minimum {{min}} characters",
+  "max_length": "Maximum {{max}} characters",
+  "min_value": "Minimum value: {{min}}",
+  "max_value": "Maximum value: {{max}}",
+  "passwords_dont_match": "Passwords do not match",
+  "password_too_weak": "Password too weak — needs uppercase, digit, and {{min}} characters",
+  "id_invalid": "Invalid ID number",
+  "credit_card_invalid": "Invalid credit card number",
+  "date_invalid": "Invalid date",
+  "date_must_be_future": "Date must be in the future",
+  "date_must_be_past": "Date must be in the past",
+  "url_invalid": "Invalid URL"
+}

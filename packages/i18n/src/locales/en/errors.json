@@ -1,0 +1,14 @@
+{
+  "generic": "An error occurred. Please try again.",
+  "network": "Network issue. Check your internet connection.",
+  "unauthorized": "You are not authorized for this action.",
+  "forbidden": "Access denied.",
+  "not_found": "Not found.",
+  "server": "Server error. Please try again later.",
+  "timeout": "Request timed out.",
+  "session_expired": "Session expired, please log in again.",
+  "invalid_credentials": "Invalid username or password.",
+  "duplicate_entry": "This value already exists.",
+  "payment_failed": "Payment failed.",
+  "out_of_stock": "This item is out of stock."
+}

@@ -1,0 +1,78 @@
+<mjml dir="rtl" lang="he">
+  <mj-head>
+    <mj-title>אישור הזמנה #{{order_number}}</mj-title>
+    <mj-preview>תודה שהזמנת מ-{{company}}! פרטי ההזמנה שלך בפנים.</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, 'Open Sans Hebrew', sans-serif" />
+      <mj-text align="right" font-size="14px" line-height="1.6" color="#333" />
+      <mj-section padding="0 16px" />
+    </mj-attributes>
+    <mj-style>
+      .price { font-weight: bold; color: #2a7ade; }
+      .muted { color: #888; font-size: 12px; }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f5f5f5" width="600px">
+    <mj-section background-color="#2a7ade" padding="20px">
+      <mj-column>
+        <mj-text color="#fff" font-size="20px" font-weight="bold" align="right">
+          {{company}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fff">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold">שלום {{customer_name}},</mj-text>
+        <mj-text>תודה שהזמנת מאיתנו! ההזמנה התקבלה והיא בטיפול.</mj-text>
+        <mj-text><strong>מספר הזמנה:</strong> #{{order_number}}</mj-text>
+        <mj-text><strong>תאריך:</strong> {{order_date}}</mj-text>
+        <mj-text><strong>זמן משלוח משוער:</strong> {{eta}}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fff">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">פרטי ההזמנה</mj-text>
+        <mj-table align="right">
+          <tr style="border-bottom:1px solid #ddd;text-align:right;">
+            <th style="padding:8px;">פריט</th>
+            <th style="padding:8px;">כמות</th>
+            <th style="padding:8px;">מחיר</th>
+          </tr>
+          {{#items}}
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:8px;">{{name}}</td>
+            <td style="padding:8px;">{{quantity}}</td>
+            <td style="padding:8px;" class="price">₪{{price}}</td>
+          </tr>
+          {{/items}}
+          <tr>
+            <td colspan="2" style="padding:8px;text-align:right;font-weight:bold;">סה"כ:</td>
+            <td style="padding:8px;" class="price">₪{{total}}</td>
+          </tr>
+        </mj-table>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fff">
+      <mj-column>
+        <mj-text><strong>כתובת למשלוח:</strong> {{delivery_address}}</mj-text>
+        <mj-button background-color="#2a7ade" href="{{tracking_url}}">מעקב אחר ההזמנה</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fff">
+      <mj-column>
+        <mj-text class="muted">
+          בברכה,<br/>
+          צוות {{company}}<br/>
+          {{company_address}}
+        </mj-text>
+        <mj-text class="muted">
+          אם לא ביצעת הזמנה זו, אנא <a href="{{contact_url}}">צור קשר</a>.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

@@ -1,0 +1,18 @@
+{
+  "required": "የሚያስፈልግ መስክ",
+  "email_invalid": "ልክ ያልሆነ የኢሜይል አድራሻ",
+  "phone_invalid": "ልክ ያልሆነ የስልክ ቁጥር",
+  "phone_il_invalid": "ልክ ያልሆነ የእስራኤል የስልክ ቁጥር (10 ቁጥሮች)",
+  "min_length": "ቢያንስ {{min}} ቁምፊዎች",
+  "max_length": "ቢበዛ {{max}} ቁምፊዎች",
+  "min_value": "ዝቅተኛ እሴት: {{min}}",
+  "max_value": "ከፍተኛ እሴት: {{max}}",
+  "passwords_dont_match": "የይለፍ ቃላት አይዛመዱም",
+  "password_too_weak": "የይለፍ ቃሉ በጣም ደካማ ነው — ትልቅ ፊደል፣ ቁጥር እና {{min}} ቁምፊዎች ያስፈልጋሉ",
+  "id_invalid": "ልክ ያልሆነ የመታወቂያ ቁጥር",
+  "credit_card_invalid": "ልክ ያልሆነ የክሬዲት ካርድ ቁጥር",
+  "date_invalid": "ልክ ያልሆነ ቀን",
+  "date_must_be_future": "ቀኑ ለወደፊት መሆን አለበት",
+  "date_must_be_past": "ቀኑ ላለፈ መሆን አለበት",
+  "url_invalid": "ልክ ያልሆነ URL"
+}

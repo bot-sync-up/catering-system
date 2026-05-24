@@ -1,0 +1,22 @@
+{
+  "title": "ניהול לקוחות",
+  "customer": "לקוח",
+  "customers": "לקוחות",
+  "leads": "לידים",
+  "phone": "טלפון",
+  "email": "אימייל",
+  "address": "כתובת",
+  "city": "עיר",
+  "birthday": "יום הולדת",
+  "tags": "תגיות",
+  "notes": "הערות",
+  "last_order": "הזמנה אחרונה",
+  "total_spent": "סה\"כ הוצאות",
+  "loyalty_points": "נקודות נאמנות",
+  "vip": "VIP",
+  "add_customer": "הוספת לקוח",
+  "edit_customer": "עריכת לקוח",
+  "delete_customer": "מחיקת לקוח",
+  "search_customer": "חיפוש לקוח",
+  "no_customers": "אין לקוחות"
+}

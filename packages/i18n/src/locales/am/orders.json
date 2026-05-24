@@ -1,0 +1,28 @@
+{
+  "title": "ትዕዛዞች",
+  "new_order": "አዲስ ትዕዛዝ",
+  "order_number": "የትዕዛዝ ቁጥር",
+  "customer": "ደንበኛ",
+  "items": "ዕቃዎች",
+  "total": "ጠቅላላ",
+  "status": {
+    "pending": "በመጠባበቅ ላይ",
+    "confirmed": "ተረጋግጧል",
+    "in_kitchen": "በወጥ ቤት",
+    "ready": "ዝግጁ",
+    "on_the_way": "በመንገድ ላይ",
+    "delivered": "ደርሷል",
+    "cancelled": "ተሰርዟል"
+  },
+  "delivery_address": "የመላኪያ አድራሻ",
+  "delivery_time": "የመላኪያ ጊዜ",
+  "notes": "ማስታወሻዎች",
+  "payment_method": "የክፍያ ዘዴ",
+  "subtotal": "ንዑስ ድምር",
+  "tax": "ግብር",
+  "discount": "ቅናሽ",
+  "tip": "ጉርሻ",
+  "no_orders": "የሚታይ ትዕዛዝ የለም",
+  "orders_count_one": "{{count}} ትዕዛዝ",
+  "orders_count_other": "{{count}} ትዕዛዞች"
+}

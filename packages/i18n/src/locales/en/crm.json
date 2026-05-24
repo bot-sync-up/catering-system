@@ -1,0 +1,22 @@
+{
+  "title": "CRM",
+  "customer": "Customer",
+  "customers": "Customers",
+  "leads": "Leads",
+  "phone": "Phone",
+  "email": "Email",
+  "address": "Address",
+  "city": "City",
+  "birthday": "Birthday",
+  "tags": "Tags",
+  "notes": "Notes",
+  "last_order": "Last order",
+  "total_spent": "Total spent",
+  "loyalty_points": "Loyalty points",
+  "vip": "VIP",
+  "add_customer": "Add customer",
+  "edit_customer": "Edit customer",
+  "delete_customer": "Delete customer",
+  "search_customer": "Search customer",
+  "no_customers": "No customers"
+}

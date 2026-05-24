@@ -1,0 +1,13 @@
+{
+  "greeting": "Hello {{name}},",
+  "signoff": "Best regards,\nThe {{company}} team",
+  "order_confirmation_subject": "Order confirmation #{{order_number}}",
+  "order_confirmation_intro": "Thank you for your order! Here are the details:",
+  "order_shipped_subject": "Your order has shipped",
+  "order_delivered_subject": "Your order has been delivered",
+  "password_reset_subject": "Password reset",
+  "password_reset_body": "Click the link to reset your password. Link valid for {{hours}} hours.",
+  "welcome_subject": "Welcome to {{company}}!",
+  "footer_unsubscribe": "If you no longer wish to receive these emails, click here to unsubscribe",
+  "footer_address": "{{company}} | {{address}}"
+}

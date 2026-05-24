@@ -1,0 +1,17 @@
+{
+  "menu": "القائمة",
+  "home": "الرئيسية",
+  "scan_qr": "مسح QR",
+  "notifications": "الإشعارات",
+  "no_notifications": "لا توجد إشعارات جديدة",
+  "pull_to_refresh": "اسحب للتحديث",
+  "offline": "لا يوجد اتصال بالإنترنت",
+  "reconnecting": "جار إعادة الاتصال...",
+  "tap_to_retry": "انقر للمحاولة مرة أخرى",
+  "permission_camera": "إذن الكاميرا مطلوب",
+  "permission_location": "إذن الموقع مطلوب",
+  "permission_notifications": "إذن الإشعارات مطلوب",
+  "app_update_available": "تحديث للتطبيق متاح",
+  "update_now": "حدث الآن",
+  "later": "لاحقا"
+}

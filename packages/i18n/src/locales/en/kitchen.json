@@ -1,0 +1,21 @@
+{
+  "title": "Kitchen",
+  "active_orders": "Active orders",
+  "preparation_time": "Preparation time",
+  "minutes_one": "1 minute",
+  "minutes_other": "{{count}} minutes",
+  "start_preparation": "Start preparation",
+  "mark_ready": "Mark as ready",
+  "send_to_delivery": "Send to delivery",
+  "kitchen_station": "Kitchen station",
+  "stations": {
+    "grill": "Grill",
+    "fryer": "Fryer",
+    "salads": "Salads",
+    "cold": "Cold dishes",
+    "drinks": "Drinks",
+    "desserts": "Desserts"
+  },
+  "rush_hour": "Rush hour",
+  "all_clear": "All clear"
+}

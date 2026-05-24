@@ -1,0 +1,22 @@
+{
+  "title": "የደንበኛ አስተዳደር",
+  "customer": "ደንበኛ",
+  "customers": "ደንበኞች",
+  "leads": "እጩዎች",
+  "phone": "ስልክ",
+  "email": "ኢሜይል",
+  "address": "አድራሻ",
+  "city": "ከተማ",
+  "birthday": "የልደት ቀን",
+  "tags": "መለያዎች",
+  "notes": "ማስታወሻዎች",
+  "last_order": "የመጨረሻ ትዕዛዝ",
+  "total_spent": "ጠቅላላ ወጪ",
+  "loyalty_points": "የታማኝነት ነጥቦች",
+  "vip": "VIP",
+  "add_customer": "ደንበኛ ጨምር",
+  "edit_customer": "ደንበኛ አርትዕ",
+  "delete_customer": "ደንበኛ አጥፋ",
+  "search_customer": "ደንበኛ ፈልግ",
+  "no_customers": "ደንበኞች የሉም"
+}
