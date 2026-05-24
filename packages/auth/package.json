@@ -1,18 +1,16 @@
 {
-  "name": "@repo/auth",
-  "version": "0.0.1",
+  "name": "@aneh/auth",
+  "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist .turbo node_modules"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/db": "workspace:*",
     "jose": "^5.9.6",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

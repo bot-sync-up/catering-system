@@ -1,22 +1,6 @@
-export const APP_NAME = 'ענה את השואל';
+export * from "./hebrew";
+export * from "./id";
 
-export function formatHebrewDate(date: Date): string {
-  return new Intl.DateTimeFormat('he-IL', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(date);
-}
-
-export function isRTL(text: string): boolean {
-  const rtlChars = /[֑-߿יִ-﷽ﹰ-ﻼ]/;
-  return rtlChars.test(text);
-}
-
-export function assertEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
+export function assertNever(value: never): never {
+  throw new Error(`Unexpected value: ${String(value)}`);
 }
