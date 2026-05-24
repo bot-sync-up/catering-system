@@ -1,61 +1,52 @@
 /**
- * טופס 102 — ניכויים חודשיים ממשכורת (פורמט Mai101)
- * ---------------------------------------------------------------
- * דיווח חודשי לרשות המסים על ניכויים — מס הכנסה,
- * ביטוח לאומי, מס בריאות.
+ * טופס 102 — דיווח חודשי לרשות המסים (מקדמות מס הכנסה ומע"מ).
+ * מוגש עד ה-15 בכל חודש על החודש הקודם.
  */
+import { z } from 'zod';
+import { xmlEscape, formatNis, formatPeriod } from './xmlEscape';
 
-import { create } from 'xmlbuilder2';
+export const Form102Schema = z.object({
+  taxpayerId: z.string().regex(/^\d{9}$/),
+  taxpayerName: z.string().min(1),
+  year: z.number().int().min(2000).max(2100),
+  month: z.number().int().min(1).max(12),
+  /** מע"מ עסקאות (מכירות) */
+  vatOutput: z.number().nonnegative(),
+  /** מע"מ תשומות (קניות) */
+  vatInput: z.number().nonnegative(),
+  /** הכנסות מעבודה ששולמו (לחישוב ניכויים) */
+  salaryPaid: z.number().nonnegative(),
+  /** מס הכנסה ניכוי במקור */
+  withheldIncomeTax: z.number().nonnegative(),
+  /** ניכוי דמי ביטוח לאומי */
+  nationalInsuranceWithheld: z.number().nonnegative(),
+  /** מקדמות שולמו השנה */
+  advancesPaidYTD: z.number().nonnegative().default(0),
+});
 
-export interface Form102Header {
-  reportingMonth: number;   // 1-12
-  reportingYear: number;    // 2025
-  employerTaxId: string;
-  employerName: string;
-  generatedAt: Date;
-  controlNumber: string;
-}
+export type Form102 = z.infer<typeof Form102Schema>;
 
-export interface Form102Summary {
-  totalGrossAgorot: number;
-  totalIncomeTaxAgorot: number;
-  totalNationalInsuranceAgorot: number;
-  totalHealthInsuranceAgorot: number;
-  employeesCount: number;
-  /** אגורות ששולמו לרשות המסים */
-  paidAmountAgorot: number;
-  /** מספר שובר תשלום */
-  paymentVoucherNumber?: string;
-}
-
-function pad9(id: string): string {
-  return id.replace(/\D/g, '').padStart(9, '0');
-}
-
-function fmtDate(d: Date): string {
-  return d.toISOString().slice(0, 10).replace(/-/g, '');
-}
-
-export function generateForm102Xml(header: Form102Header, summary: Form102Summary): string {
-  const doc = create({ version: '1.0', encoding: 'UTF-8' })
-    .ele('Mai101', { Format: '102', Version: '2025.1' })
-      .ele('Header')
-        .ele('ControlNumber').txt(header.controlNumber).up()
-        .ele('ReportingMonth').txt(String(header.reportingMonth).padStart(2, '0')).up()
-        .ele('ReportingYear').txt(String(header.reportingYear)).up()
-        .ele('GeneratedAt').txt(fmtDate(header.generatedAt)).up()
-        .ele('EmployerTaxId').txt(pad9(header.employerTaxId)).up()
-        .ele('EmployerName').txt(header.employerName).up()
-      .up()
-      .ele('Summary102')
-        .ele('TotalGross').txt(String(summary.totalGrossAgorot)).up()
-        .ele('TotalIncomeTax').txt(String(summary.totalIncomeTaxAgorot)).up()
-        .ele('TotalNationalInsurance').txt(String(summary.totalNationalInsuranceAgorot)).up()
-        .ele('TotalHealthInsurance').txt(String(summary.totalHealthInsuranceAgorot)).up()
-        .ele('EmployeesCount').txt(String(summary.employeesCount)).up()
-        .ele('PaidAmount').txt(String(summary.paidAmountAgorot)).up()
-        .ele('PaymentVoucherNumber').txt(summary.paymentVoucherNumber ?? '').up()
-      .up();
-
-  return doc.end({ prettyPrint: true });
+export function renderForm102(input: Form102): string {
+  const data = Form102Schema.parse(input);
+  const vatBalance = data.vatOutput - data.vatInput;
+  return [
+    `<?xml version="1.0" encoding="UTF-8"?>`,
+    `<Form102 period="${formatPeriod(data.year, data.month)}" xmlns="https://taxes.gov.il/forms/102">`,
+    `  <Taxpayer>`,
+    `    <Id>${xmlEscape(data.taxpayerId)}</Id>`,
+    `    <Name>${xmlEscape(data.taxpayerName)}</Name>`,
+    `  </Taxpayer>`,
+    `  <Vat currency="ILS">`,
+    `    <Output>${formatNis(data.vatOutput)}</Output>`,
+    `    <Input>${formatNis(data.vatInput)}</Input>`,
+    `    <Balance>${formatNis(vatBalance)}</Balance>`,
+    `  </Vat>`,
+    `  <IncomeTax currency="ILS">`,
+    `    <SalaryPaid>${formatNis(data.salaryPaid)}</SalaryPaid>`,
+    `    <WithheldIncomeTax>${formatNis(data.withheldIncomeTax)}</WithheldIncomeTax>`,
+    `    <NationalInsuranceWithheld>${formatNis(data.nationalInsuranceWithheld)}</NationalInsuranceWithheld>`,
+    `    <AdvancesPaidYTD>${formatNis(data.advancesPaidYTD)}</AdvancesPaidYTD>`,
+    `  </IncomeTax>`,
+    `</Form102>`,
+  ].join('\n');
 }

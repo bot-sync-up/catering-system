@@ -1,73 +1,68 @@
 /**
- * טופס 126 — סיכום שנתי לכלל העובדים (פורמט Mai101)
- * ---------------------------------------------------------------
- * דו"ח שנתי המוגש למשרד האוצר (יחידת השכר), המסכם את
- * כל העובדים והתשלומים בשנת המס. נדרש להגשה עד 30/04 לכל שנה
- * בגין השנה שחלפה.
+ * טופס 126 — דין וחשבון שנתי על ניכויים ממשכורת.
+ * מוגש פעמיים בשנה: ב-30.4 (חצי שנה ראשונה) וב-30.9 (חצי שנה שניה),
+ * ולפעמים כדיווח שנתי שלם בסיום שנה.
+ * המבנה התומך הוא קובץ "Mai101" של רשות המסים — בנייה לפי מבנה רשומות אחיד.
  */
+import { z } from 'zod';
+import { xmlEscape, formatNis, formatPeriod } from './xmlEscape';
 
-import { create } from 'xmlbuilder2';
-import type { Form106Employee } from './form106.xml';
+export const Form126EmployeeSchema = z.object({
+  idNumber: z.string().regex(/^\d{9}$/),
+  fullName: z.string().min(1),
+  startMonth: z.number().int().min(1).max(12),
+  endMonth: z.number().int().min(1).max(12),
+  grossSalary: z.number().nonnegative(),
+  taxWithheld: z.number().nonnegative(),
+  nationalInsurance: z.number().nonnegative(),
+  healthInsurance: z.number().nonnegative(),
+});
 
-export interface Form126Header {
-  taxYear: number;
-  employerTaxId: string;
-  employerName: string;
-  employerAddress?: string;
-  generatedAt: Date;
-  controlNumber: string;
-}
+export const Form126Schema = z.object({
+  employerId: z.string().regex(/^\d{9}$/),
+  employerName: z.string().min(1),
+  taxYear: z.number().int().min(2000).max(2100),
+  reportingPeriod: z.enum(['H1', 'H2', 'FULL']),
+  fileFormat: z.literal('Mai101').default('Mai101'),
+  employees: z.array(Form126EmployeeSchema).min(1),
+});
 
-function pad9(id: string): string {
-  return id.replace(/\D/g, '').padStart(9, '0');
-}
+export type Form126 = z.infer<typeof Form126Schema>;
 
-function fmtDate(d: Date): string {
-  return d.toISOString().slice(0, 10).replace(/-/g, '');
-}
+export function renderForm126(input: Form126): string {
+  const data = Form126Schema.parse(input);
+  const totalGross = data.employees.reduce((s, e) => s + e.grossSalary, 0);
+  const totalTax = data.employees.reduce((s, e) => s + e.taxWithheld, 0);
+  const totalNI = data.employees.reduce((s, e) => s + e.nationalInsurance, 0);
 
-function sum(arr: Form106Employee[], key: keyof Form106Employee): number {
-  return arr.reduce((s, e) => s + Number(e[key] ?? 0), 0);
-}
+  const employeeRecords = data.employees.map((e) => [
+    `  <Employee>`,
+    `    <IdNumber>${xmlEscape(e.idNumber)}</IdNumber>`,
+    `    <FullName>${xmlEscape(e.fullName)}</FullName>`,
+    `    <EmploymentPeriod from="${formatPeriod(data.taxYear, e.startMonth)}" to="${formatPeriod(data.taxYear, e.endMonth)}"/>`,
+    `    <GrossSalary>${formatNis(e.grossSalary)}</GrossSalary>`,
+    `    <TaxWithheld>${formatNis(e.taxWithheld)}</TaxWithheld>`,
+    `    <NationalInsurance>${formatNis(e.nationalInsurance)}</NationalInsurance>`,
+    `    <HealthInsurance>${formatNis(e.healthInsurance)}</HealthInsurance>`,
+    `  </Employee>`,
+  ].join('\n')).join('\n');
 
-export function generateForm126Xml(
-  header: Form126Header,
-  employees: Form106Employee[],
-): string {
-  const doc = create({ version: '1.0', encoding: 'UTF-8' })
-    .ele('Mai101', { Format: '126', Version: '2025.1' })
-      .ele('Header')
-        .ele('ControlNumber').txt(header.controlNumber).up()
-        .ele('TaxYear').txt(String(header.taxYear)).up()
-        .ele('GeneratedAt').txt(fmtDate(header.generatedAt)).up()
-        .ele('EmployerTaxId').txt(pad9(header.employerTaxId)).up()
-        .ele('EmployerName').txt(header.employerName).up()
-        .ele('EmployerAddress').txt(header.employerAddress ?? '').up()
-      .up()
-      .ele('Summary126')
-        .ele('EmployeesCount').txt(String(employees.length)).up()
-        .ele('TotalGrossSalary').txt(String(sum(employees, 'grossSalaryAgorot'))).up()
-        .ele('TotalTaxableSalary').txt(String(sum(employees, 'taxableSalaryAgorot'))).up()
-        .ele('TotalIncomeTax').txt(String(sum(employees, 'incomeTaxAgorot'))).up()
-        .ele('TotalNationalInsurance').txt(String(sum(employees, 'nationalInsuranceAgorot'))).up()
-        .ele('TotalHealthInsurance').txt(String(sum(employees, 'healthInsuranceAgorot'))).up()
-        .ele('TotalPensionEmployer').txt(String(sum(employees, 'pensionEmployerAgorot'))).up()
-        .ele('TotalPensionEmployee').txt(String(sum(employees, 'pensionEmployeeAgorot'))).up()
-        .ele('TotalStudyFundEmployer').txt(String(sum(employees, 'studyFundEmployerAgorot'))).up()
-        .ele('TotalStudyFundEmployee').txt(String(sum(employees, 'studyFundEmployeeAgorot'))).up()
-        .ele('TotalSeverance').txt(String(sum(employees, 'severanceAgorot'))).up()
-      .up()
-      .ele('Employees');
-
-  for (const e of employees) {
-    doc.ele('Employee126')
-      .ele('TaxId').txt(pad9(e.taxId)).up()
-      .ele('FullName').txt(e.fullName).up()
-      .ele('GrossSalary').txt(String(e.grossSalaryAgorot)).up()
-      .ele('IncomeTax').txt(String(e.incomeTaxAgorot)).up()
-      .ele('NationalInsurance').txt(String(e.nationalInsuranceAgorot)).up()
-      .up();
-  }
-
-  return doc.end({ prettyPrint: true });
+  return [
+    `<?xml version="1.0" encoding="UTF-8"?>`,
+    `<Form126 taxYear="${data.taxYear}" period="${data.reportingPeriod}" format="${data.fileFormat}" xmlns="https://taxes.gov.il/forms/126">`,
+    `  <Employer>`,
+    `    <Id>${xmlEscape(data.employerId)}</Id>`,
+    `    <Name>${xmlEscape(data.employerName)}</Name>`,
+    `  </Employer>`,
+    `  <Summary currency="ILS">`,
+    `    <EmployeeCount>${data.employees.length}</EmployeeCount>`,
+    `    <TotalGrossSalary>${formatNis(totalGross)}</TotalGrossSalary>`,
+    `    <TotalTaxWithheld>${formatNis(totalTax)}</TotalTaxWithheld>`,
+    `    <TotalNationalInsurance>${formatNis(totalNI)}</TotalNationalInsurance>`,
+    `  </Summary>`,
+    `  <Employees>`,
+    employeeRecords,
+    `  </Employees>`,
+    `</Form126>`,
+  ].join('\n');
 }

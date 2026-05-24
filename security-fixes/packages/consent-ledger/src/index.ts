@@ -1,215 +1,185 @@
 /**
- * Marketing Consent Ledger
- * ---------------------------------------------------------------
- * תואם לסעיף 30א לחוק התקשורת (בזק ושידורים), התשמ"ב-1982 —
- * "חוק הספאם". דורש הסכמה מפורשת מתועדת לפני שיווק.
+ * Consent Ledger — מסד הסכמות בלתי-ניתן-לשינוי.
  *
- * תכונות:
- *   1) Double opt-in — לאחר טופס, מייל אישור עם token חד-פעמי.
- *   2) Immutable hash-chain log — כל רשומה כוללת prevHash, כך
- *      שלא ניתן לערוך רשומות ישנות בלי לחבל בשרשרת.
- *   3) Withdraw — ביטול הסכמה בקלות, בכל עת (one-click unsubscribe).
- *   4) שליפת היסטוריית הסכמות לכל משתמש (לצרכי ביקורת).
+ * חוק התקשורת (בזק ושידורים), תיקון 40 ("חוק הספאם"):
+ *   אסור לשלוח דבר פרסומת בלי הסכמה מפורשת מראש בכתב.
+ *   חובה לאפשר הסרה. חובה לתעד את ההסכמה.
+ *
+ * המודל: double opt-in — המשתמש נרשם, מקבל מייל אישור, ומאשר.
+ * רק לאחר האישור ההסכמה תקפה. כל אירוע נכתב append-only לחבילת hash-chain.
  */
-
-import crypto from 'crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { z } from 'zod';
 
-/* ----------------------------------------------------------- */
-/* Types                                                         */
-/* ----------------------------------------------------------- */
-export type ConsentChannel = 'email' | 'sms' | 'whatsapp' | 'phone' | 'push';
-export type ConsentAction = 'requested' | 'confirmed' | 'withdrawn' | 'expired';
+export const ConsentEventKindSchema = z.enum([
+  'opt_in_requested',
+  'opt_in_confirmed',
+  'opt_out',
+  'preferences_updated',
+]);
+export type ConsentEventKind = z.infer<typeof ConsentEventKindSchema>;
 
-export interface ConsentEntry {
-  id: string;
-  userId: string;
-  channel: ConsentChannel;
-  action: ConsentAction;
-  purpose: string;             // "newsletter", "promos", וכו'
-  ip: string;
-  userAgent?: string;
-  evidence?: string;           // טוקן מהמייל / מספר טופס
-  timestamp: Date;
-  prevHash: string;            // hex of sha256
-  hash: string;                // hex of sha256(serialize(entry without hash))
-}
-
-export interface ConsentStore {
-  appendEntry(entry: ConsentEntry): Promise<void>;
-  getLastHash(): Promise<string>;
-  findByUser(userId: string): Promise<ConsentEntry[]>;
-  findPendingToken(token: string): Promise<{ userId: string; channel: ConsentChannel; purpose: string } | null>;
-  consumeToken(token: string): Promise<void>;
-  storePendingToken(token: string, userId: string, channel: ConsentChannel, purpose: string, ttlMinutes: number): Promise<void>;
-}
-
-export interface MailSender {
-  sendConfirmation(email: string, opts: { token: string; purpose: string; verifyUrl: string }): Promise<void>;
-}
-
-/* ----------------------------------------------------------- */
-/* Schemas                                                       */
-/* ----------------------------------------------------------- */
-export const RequestConsentSchema = z.object({
-  userId: z.string().uuid(),
+export const ConsentEventSchema = z.object({
+  id: z.string().uuid(),
+  subjectId: z.string(),
   email: z.string().email(),
-  channel: z.enum(['email', 'sms', 'whatsapp', 'phone', 'push']),
-  purpose: z.string().min(2).max(120),
+  channel: z.enum(['email', 'sms', 'whatsapp', 'phone']),
+  kind: ConsentEventKindSchema,
+  ip: z.string().nullable(),
+  userAgent: z.string().nullable(),
+  occurredAt: z.date(),
+  /** hash של האירוע הקודם בשרשרת — מבטיח שאי אפשר לשנות היסטוריה */
+  prevHash: z.string().nullable(),
+  /** hash הנוכחי */
+  hash: z.string(),
+  payload: z.record(z.unknown()).optional(),
 });
 
-export const ConfirmConsentSchema = z.object({
-  token: z.string().min(16),
-});
+export type ConsentEvent = z.infer<typeof ConsentEventSchema>;
 
-export const WithdrawConsentSchema = z.object({
-  userId: z.string().uuid(),
-  channel: z.enum(['email', 'sms', 'whatsapp', 'phone', 'push']),
-  purpose: z.string().min(2).max(120),
-});
-
-/* ----------------------------------------------------------- */
-/* Helpers                                                       */
-/* ----------------------------------------------------------- */
-function sha256Hex(input: string): string {
-  return crypto.createHash('sha256').update(input).digest('hex');
-}
-
-function newId(): string {
-  return crypto.randomUUID();
-}
-
-function newToken(): string {
-  return crypto.randomBytes(32).toString('base64url');
-}
-
-function entryDigest(entry: Omit<ConsentEntry, 'hash'>): string {
-  // serialize בסדר קבוע, ללא שדה hash
-  const data = JSON.stringify({
-    id: entry.id,
-    userId: entry.userId,
-    channel: entry.channel,
-    action: entry.action,
-    purpose: entry.purpose,
-    ip: entry.ip,
-    userAgent: entry.userAgent ?? '',
-    evidence: entry.evidence ?? '',
-    timestamp: entry.timestamp.toISOString(),
-    prevHash: entry.prevHash,
+function computeHash(prev: string | null, event: Omit<ConsentEvent, 'hash'>): string {
+  const canonical = JSON.stringify({
+    id: event.id,
+    subjectId: event.subjectId,
+    email: event.email,
+    channel: event.channel,
+    kind: event.kind,
+    ip: event.ip,
+    userAgent: event.userAgent,
+    occurredAt: event.occurredAt.toISOString(),
+    prevHash: prev,
+    payload: event.payload ?? null,
   });
-  return sha256Hex(data);
+  return createHash('sha256').update(canonical).digest('hex');
 }
 
-/* ----------------------------------------------------------- */
-/* Public API                                                    */
-/* ----------------------------------------------------------- */
-export class ConsentLedger {
-  constructor(
-    private store: ConsentStore,
-    private mail: MailSender,
-    private verifyBaseUrl: string,
-    private tokenTtlMinutes = 60 * 24, // 24 שעות
-  ) {}
+export interface ConsentLedgerStore {
+  append(event: ConsentEvent): Promise<void>;
+  lastHashFor(subjectId: string): Promise<string | null>;
+  history(subjectId: string): Promise<ConsentEvent[]>;
+  /** טוקן חד-פעמי לאישור */
+  saveConfirmationToken(token: string, subjectId: string, expiresAt: Date): Promise<void>;
+  consumeConfirmationToken(token: string): Promise<{ subjectId: string } | null>;
+}
 
-  /** שלב 1 — בקשת הסכמה ואישור במייל */
-  async requestConsent(input: {
-    userId: string;
-    email: string;
-    channel: ConsentChannel;
-    purpose: string;
-    ip: string;
-    userAgent?: string;
-  }): Promise<{ token: string }> {
-    const token = newToken();
-    await this.store.storePendingToken(token, input.userId, input.channel, input.purpose, this.tokenTtlMinutes);
+export interface Mailer {
+  sendConfirmation(email: string, confirmUrl: string): Promise<void>;
+}
 
-    const prevHash = await this.store.getLastHash();
-    const entryBase = {
-      id: newId(),
-      userId: input.userId,
-      channel: input.channel,
-      action: 'requested' as ConsentAction,
-      purpose: input.purpose,
-      ip: input.ip,
-      userAgent: input.userAgent,
-      evidence: sha256Hex(token).slice(0, 12), // לא שומרים את ה-token עצמו בלוג
-      timestamp: new Date(),
-      prevHash,
-    };
-    const hash = entryDigest(entryBase);
-    await this.store.appendEntry({ ...entryBase, hash });
+export interface ConsentInput {
+  subjectId: string;
+  email: string;
+  channel: ConsentEvent['channel'];
+  ip?: string | null;
+  userAgent?: string | null;
+  payload?: Record<string, unknown>;
+}
 
-    await this.mail.sendConfirmation(input.email, {
-      token,
-      purpose: input.purpose,
-      verifyUrl: `${this.verifyBaseUrl}?token=${encodeURIComponent(token)}`,
-    });
+async function appendEvent(
+  store: ConsentLedgerStore,
+  kind: ConsentEventKind,
+  inp: ConsentInput,
+): Promise<ConsentEvent> {
+  const prev = await store.lastHashFor(inp.subjectId);
+  const event: Omit<ConsentEvent, 'hash'> = {
+    id: crypto.randomUUID(),
+    subjectId: inp.subjectId,
+    email: inp.email,
+    channel: inp.channel,
+    kind,
+    ip: inp.ip ?? null,
+    userAgent: inp.userAgent ?? null,
+    occurredAt: new Date(),
+    prevHash: prev,
+    payload: inp.payload,
+  };
+  const hash = computeHash(prev, event);
+  const finalized: ConsentEvent = { ...event, hash };
+  await store.append(finalized);
+  return finalized;
+}
 
-    return { token };
+/**
+ * שלב 1 — המשתמש ביקש להירשם. שולחים מייל אימות, לא מסמנים הסכמה בפועל.
+ */
+export async function requestOptIn(
+  inp: ConsentInput,
+  store: ConsentLedgerStore,
+  mailer: Mailer,
+  confirmUrlTemplate: string,
+): Promise<{ event: ConsentEvent; token: string }> {
+  const event = await appendEvent(store, 'opt_in_requested', inp);
+  const token = randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 שעות
+  await store.saveConfirmationToken(token, inp.subjectId, expiresAt);
+  const url = confirmUrlTemplate.replace('{{token}}', encodeURIComponent(token));
+  await mailer.sendConfirmation(inp.email, url);
+  return { event, token };
+}
+
+/**
+ * שלב 2 — המשתמש לחץ על הקישור במייל. רק עכשיו ההסכמה תקפה.
+ */
+export async function confirmOptIn(
+  token: string,
+  channel: ConsentEvent['channel'],
+  metadata: { ip?: string | null; userAgent?: string | null; email: string },
+  store: ConsentLedgerStore,
+): Promise<ConsentEvent> {
+  const consumed = await store.consumeConfirmationToken(token);
+  if (!consumed) throw new Error('טוקן אישור לא תקף או פג תוקף');
+  return appendEvent(store, 'opt_in_confirmed', {
+    subjectId: consumed.subjectId,
+    email: metadata.email,
+    channel,
+    ip: metadata.ip,
+    userAgent: metadata.userAgent,
+  });
+}
+
+/**
+ * הסרה מרשימה — חובה לפי החוק שתהיה זמינה תמיד.
+ */
+export async function optOut(
+  inp: ConsentInput,
+  store: ConsentLedgerStore,
+): Promise<ConsentEvent> {
+  return appendEvent(store, 'opt_out', inp);
+}
+
+/**
+ * בדיקה האם נושא מידע נתן הסכמה ולא בוטלה.
+ */
+export async function hasActiveConsent(
+  subjectId: string,
+  channel: ConsentEvent['channel'],
+  store: ConsentLedgerStore,
+): Promise<boolean> {
+  const events = await store.history(subjectId);
+  let active = false;
+  for (const ev of events) {
+    if (ev.channel !== channel) continue;
+    if (ev.kind === 'opt_in_confirmed') active = true;
+    if (ev.kind === 'opt_out') active = false;
   }
+  return active;
+}
 
-  /** שלב 2 — אישור הקליק במייל */
-  async confirmConsent(input: { token: string; ip: string; userAgent?: string }): Promise<boolean> {
-    const pending = await this.store.findPendingToken(input.token);
-    if (!pending) return false;
-
-    const prevHash = await this.store.getLastHash();
-    const entryBase = {
-      id: newId(),
-      userId: pending.userId,
-      channel: pending.channel,
-      action: 'confirmed' as ConsentAction,
-      purpose: pending.purpose,
-      ip: input.ip,
-      userAgent: input.userAgent,
-      evidence: sha256Hex(input.token).slice(0, 12),
-      timestamp: new Date(),
-      prevHash,
-    };
-    const hash = entryDigest(entryBase);
-    await this.store.appendEntry({ ...entryBase, hash });
-    await this.store.consumeToken(input.token);
-    return true;
-  }
-
-  /** ביטול הסכמה (חד-קליק) */
-  async withdrawConsent(input: {
-    userId: string;
-    channel: ConsentChannel;
-    purpose: string;
-    ip: string;
-    userAgent?: string;
-  }): Promise<void> {
-    const prevHash = await this.store.getLastHash();
-    const entryBase = {
-      id: newId(),
-      userId: input.userId,
-      channel: input.channel,
-      action: 'withdrawn' as ConsentAction,
-      purpose: input.purpose,
-      ip: input.ip,
-      userAgent: input.userAgent,
-      timestamp: new Date(),
-      prevHash,
-    };
-    const hash = entryDigest(entryBase);
-    await this.store.appendEntry({ ...entryBase, hash });
-  }
-
-  /** היסטוריית הסכמות למשתמש */
-  async getHistory(userId: string): Promise<ConsentEntry[]> {
-    return this.store.findByUser(userId);
-  }
-
-  /** בדיקת תקינות שרשרת ה-hash (לאודיט) */
-  async verifyChain(entries: ConsentEntry[]): Promise<boolean> {
-    let prev = '';
-    for (const e of entries) {
-      if (e.prevHash !== prev) return false;
-      const recomputed = entryDigest({ ...e, hash: undefined } as unknown as Omit<ConsentEntry, 'hash'>);
-      if (recomputed !== e.hash) return false;
-      prev = e.hash;
+/**
+ * אימות שלמות שרשרת — צריך לעבור ב-cron כדי לוודא שאף אחד לא שינה רשומות.
+ */
+export async function verifyChain(
+  subjectId: string,
+  store: ConsentLedgerStore,
+): Promise<{ valid: boolean; brokenAt?: string }> {
+  const events = await store.history(subjectId);
+  let prev: string | null = null;
+  for (const ev of events) {
+    const expected = computeHash(prev, { ...ev });
+    if (expected !== ev.hash || ev.prevHash !== prev) {
+      return { valid: false, brokenAt: ev.id };
     }
-    return true;
+    prev = ev.hash;
   }
+  return { valid: true };
 }

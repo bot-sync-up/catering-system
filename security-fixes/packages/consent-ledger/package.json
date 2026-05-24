@@ -1,14 +1,13 @@
 {
   "name": "@security-fixes/consent-ledger",
   "version": "1.0.0",
-  "description": "Marketing consent with double opt-in and immutable hash-chain log",
+  "description": "דבל-אופט-אין + לוג בלתי-ניתן-לשינוי של הסכמות לפי חוק התקשורת",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "license": "UNLICENSED",
-  "dependencies": {
-    "zod": "^3.23.0"
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
   },
-  "devDependencies": {
-    "typescript": "^5.4.0"
+  "dependencies": {
+    "zod": "^3.22.4"
   }
 }

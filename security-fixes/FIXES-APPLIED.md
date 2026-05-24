@@ -1,217 +1,213 @@
-# דוח תיקונים — Security Fixes (QA3)
+# FIXES-APPLIED — תיקוני P0
 
-> תאריך הפקה: 11/05/2026
-> מבצע: agent-a2fb19a0abb722899
-> כל הקבצים תחת `security-fixes/` (RTL).
+<div dir="rtl">
 
----
+מסמך זה מרכז את כל ה-packages שנבנו כאן, את הבעיה שכל אחד פותר, ואיפה ליישם
+בכל worktree/פרויקט במונורפו. כל package מובא כקוד TypeScript עם Zod + vitest.
 
-## מבט-על
+## טבלת סיכום
 
-המסמך מסכם את 12 פגיעויות האבטחה ואת 8 הבלוקרים החוקיים שזוהו ב-QA3 ומציע
-patches מוכנים ליישום + 5 חבילות חדשות. הכל מוכן להעתקה / החלה ב-worktrees המקוריים.
-
-| # | קטגוריה | תיאור קצר | סטטוס | קבצים |
-|---|----------|-----------|--------|-------|
-| 1 | חוקי | מע"מ 17%→18% | מוכן | `patches/01-vat-*` |
-| 2 | חוקי / פרטיות | זכות עיון + מחיקה (תיקון 13) | מוכן | `packages/privacy/` |
-| 3 | חוקי | שימור 7 שנים ב-cold storage | מוכן | `cron/archival.ts` |
-| 4 | חוקי / יציבות | iCount fallback ל-Green Invoice / Rivhit | מוכן | `packages/icount-fallback/` |
-| 5 | חוקי | טפסי 106 / 102 / 126 Mai101 XML | מוכן | `packages/tax-reports/` |
-| 6 | חוקי | Double opt-in + immutable consent log | מוכן | `packages/consent-ledger/` |
-| 7 | אבטחה (P0) | JWT_SECRET="change-me" | מוכן | `patches/07-jwt-secret-strong.patch` |
-| 8 | אבטחה (P0) | OTP Math.random + console.log | מוכן | `patches/08-otp-crypto-random.patch` |
-| 9 | אבטחה (P0) | AES key hard-coded → KMS / HSM | מוכן | `packages/kms-client/` |
-| 10 | אבטחה (P0) | Cookies ללא secure / httpOnly / sameSite | מוכן (template) | `patches/10-cookie-secure-template.patch` |
-| 11 | אבטחה (P0) | JWT 7 ימים → 15 דקות + refresh | מוכן | `patches/11-jwt-15min-refresh.patch` |
-| 12 | אבטחה (P0) | 2FA חובה למנהלים | מוכן | `patches/12-2fa-mandatory-admin.patch` |
-| 13 | אבטחה (P0) | Cardcom zero-PCI | מוכן | `patches/13-cardcom-zero-pci.patch` |
-| 14 | אבטחה (P0) | XSS ב-marketing templates | מוכן | `patches/14-marketing-xss-dompurify.patch` |
+| # | Package | קטגוריה | בעיה שנפתרה | חוק/תקן | יישום |
+|---|---------|---------|------------|---------|-------|
+| 1 | vat | חוקי ישראל | חישוב מע"מ קשיח 17% | רשות המסים — 18% מ-1.1.2025 | כל מערכות החיוב |
+| 2 | privacy | חוקי ישראל | SAR + מחיקה לא ממומשים | חוק הגנת הפרטיות סעיפים 13, 14 | API לקוחות + DB |
+| 3 | archival | חוקי ישראל | חשבוניות נמחקות לפני 7 שנים | פקודת מס הכנסה | cron לילי |
+| 4 | invoicing-fallback | חוקי ישראל | תלות בספק חשבוניות בודד | חובת הוצאת חשבונית | שירות חיוב |
+| 5 | tax-reports | חוקי ישראל | אין דיווח 106/102/126 | רשות המסים — Mai101 | פירולים שנתי+חודשי |
+| 6 | consent-ledger | חוקי ישראל | רישום לדיוור בלי double-opt-in | חוק התקשורת תיקון 40 | רישום משתמשים |
+| 7 | jwt-config | אבטחה P0 | secrets חלשים, אין refresh | OWASP A02 | services backend |
+| 8 | otp | אבטחה P0 | Math.random לסודות | OWASP A02 | login + reset password |
+| 9 | kms-client | אבטחה P0 | מפתחות הצפנה ב-env | OWASP A02 | הצפנת PII ב-DB |
+| 10 | cookies | אבטחה P0 | חסר Secure/HttpOnly/SameSite | OWASP A05 | session/auth cookies |
+| 11 | 2fa-enforcement | אבטחה P0 | admin login בלי 2FA | תקנות אבטחת מידע סעיף 16(ג) | middleware backend |
+| 12 | pci-validator | אבטחה P0 | חשש שמספרי כרטיס בלוגים | PCI-DSS 3.4 | CI + middleware |
+| 13 | xss-sanitizer | אבטחה P0 | input של משתמש לא מסונן | OWASP A03 | כל endpoint שמקבל HTML |
 
 ---
 
-## 1. מע"מ 17% → 18%
+## 1. packages/vat — חישוב מע"מ ישראלי
 
-**רציונל חוקי:** חוק התכנית הכלכלית לשנת 2025 העלה את שיעור המע"מ ל-18% החל מ-01/01/2025.
+**הבעיה**: ה-codebase כולל קבועים כמו `const VAT = 0.17` שלא משתנים אוטומטית
+לשיעור החדש 18% של 2025.
 
-**מה תוקן:**
-- `agent-a31b566159e7cc878/finance-docs/.env.example`: `VAT_RATE=0.17` → `VAT_RATE=0.18`.
-- `agent-accb121134afd7c1a/packages/integrations/icount/src/types/index.ts`:
-  - שורה 55 — קומנט `VATType.STANDARD` עודכן ל-"18%".
-  - שורה 91 — `vatRate.default(17)` → `default(18)`.
-- מסמך `patches/01-vat-global-grep-instructions.md` כולל פקודות grep ל-Bash ול-PowerShell לאיתור התרחשויות נוספות בכל הריפו, יחד עם טבלת המרה.
+**פתרון**: `getVatRate(date)` עם טבלה היסטורית + `calcVat`/`withVat`/`stripVat`.
 
-**קבצים:**
-- `security-fixes/patches/01-vat-finance-docs-env.patch`
-- `security-fixes/patches/01-vat-icount-types.patch`
-- `security-fixes/patches/01-vat-global-grep-instructions.md`
+**איפה ליישם**:
+- ב-`backend/billing/*` — להחליף כל `* 1.17` ו-`* 0.17`.
+- ב-`apps/web/checkout/*` — תצוגת מע"מ בעגלה.
+- ב-`pdf-templates/invoice.hbs` — תבנית חשבונית.
+- ב-`infra/sql/migrations/*` — סקריפט עדכון רשומות `draft` בלבד (ראה `migration.md`).
 
----
+## 2. packages/privacy — SAR + Right To Erasure
 
-## 2. זכות עיון / מחיקה — תיקון 13 (8/2025)
+**הבעיה**: בקשת לקוח "תמחקו אותי" / "תשלחו לי את כל המידע עליי" לא נתמכת.
+חוק הגנת הפרטיות מחייב מענה תוך 30 יום.
 
-**רציונל חוקי:** תיקון 13 לחוק הגנת הפרטיות, שנכנס לתוקף ב-08/2025, מחייב מימוש פעיל של הזכויות הבאות:
-- סעיף 13 — זכות עיון (Subject Access Request).
-- סעיף 14 — זכות מחיקה (Right to be Forgotten).
-- חובת מינוי DPO ושימור audit-log.
+**פתרון**:
+- `subjectAccessRequest.ts` — workflow מאומת עם דדליין.
+- `rightToErasure.ts` — אנונימיזציה דטרמיניסטית במקום מחיקה כשיש חובת שמירה.
+- `PRIVACY-POLICY.md` — תבנית בעברית RTL לפרסום ב-`/privacy-policy`.
 
-**חבילה: `security-fixes/packages/privacy/`**
-- `subjectAccessRequest.ts` — Express handler שמייצא JSON שלם עם CRM + Orders + Payments + AuditLog + Consents. בעל אכיפת self-or-DPO + audit log.
-- `rightToErasure.ts` — מחיקה רכה + אנונימיזציה ב-AES sha256 hashes (משאיר רשומות שעליהן חובת שמירה חוקית — חשבוניות, מסים, 7 שנים).
-- `PRIVACY-POLICY.md` — מסמך מדיניות פרטיות לאתר, RTL, כולל תקופות שימור, פרטי DPO, פרטי הרשות להגנת הפרטיות.
-- `index.ts` + `package.json`.
+**איפה ליישם**:
+- API ייעודי `/api/privacy/sar` ו-`/api/privacy/erasure`.
+- Cron יומי שמתריע על SAR שלא נענו תוך 25 יום.
+- Hook ב-`users.delete()` שמפעיל `eraseSubject` עם `DEFAULT_ISRAEL_POLICIES`.
 
----
+## 3. packages/archival — Cron ארכיון R2 7 שנים
 
-## 3. שימור 7 שנים ב-cold storage R2
+**הבעיה**: רשומות חשבוניות/לוגים נמחקות מוקדם מדי או נשארות ב-hot storage יקר.
 
-**רציונל חוקי:** סעיף 25 לפקודת מס הכנסה + סעיף 130 לחוק מע"מ דורשים שמירת מסמכים פיננסיים 7 שנים.
+**פתרון**: `runArchivalCron` עם שני שלבים — hot→cold אחרי שנה, cold→deleted אחרי 7 שנים.
 
-**קובץ: `security-fixes/cron/archival.ts`**
-- מעביר רשומות בנות > 12 חודשים ל-Cloudflare R2 (gzip + sha256 checksum).
-- מוחק רשומות > 7 שנים מ-R2.
-- תומך ב-`--dry-run`. מקבל מערך `ArchivableTable` כדי שיתאים לכל מודל Prisma.
+**איפה ליישם**:
+- Worker Cloudflare / cron node שרץ בלילה.
+- מימוש `ArchivalSource` עבור כל טבלה רגישה (invoices, audit_logs, documents).
+- חיבור `ColdStorage` ל-R2 / S3 Glacier.
 
----
+## 4. packages/invoicing-fallback — חשבוניות עם fallback
 
-## 4. iCount Fallback
+**הבעיה**: כשiCount או GreenInvoice נופלים — לקוח לא מקבל חשבונית
+ואנחנו בעבירה על חוק.
 
-**חבילה: `security-fixes/packages/icount-fallback/`**
-- `ResilientInvoiceClient`: מנסה iCount → Green Invoice → Rivhit.
-- Circuit Breaker per-provider (5 כשלונות = 60 שניות פתוח).
-- Exponential backoff (200/400/800 ms).
-- שומר ב-IntegrationLog איזה ספק הצליח.
+**פתרון**: `issueInvoice(req, providers, audit)` מנסה לפי הסדר ורושם כל ניסיון.
 
----
+**איפה ליישם**:
+- `backend/billing/services/InvoiceService.ts` — להחליף את הקריאה הישירה ל-iCount
+  ב-`issueInvoice` עם שלושת הספקים.
+- adapters: `iCountAdapter`, `greenInvoiceAdapter`, `rivhitAdapter` — שיממשו את `InvoiceProvider`.
 
-## 5. טפסי 106 / 102 / 126 בפורמט Mai101 XML
+## 5. packages/tax-reports — טופסי 106/102/126
 
-**חבילה: `security-fixes/packages/tax-reports/`**
-- `form106.xml.ts` — דו"ח שכר שנתי לעובד (שדות, סכומים באגורות, תאריכי YYYYMMDD).
-- `form102.xml.ts` — דיווח חודשי על ניכויים (מס הכנסה, ביטוח לאומי, מס בריאות).
-- `form126.xml.ts` — סיכום שנתי לכלל העובדים (כולל סיכומי שכר ותשלומים אגרגטיביים).
+**הבעיה**: דיווח ידני לרשות המסים. סיכון לעיכובים וקנסות.
 
-הפורמט תואם למפרט רשות המסים `Mai101 v2025.1`.
+**פתרון**: רינדור XML של שלושת הטפסים בפורמט Mai101.
 
----
+**איפה ליישם**:
+- `services/payroll/exporters/` — קריאה ל-`renderForm106/126` חודשי / חצי-שנתי.
+- `services/finance/exporters/` — `renderForm102` חודשי עד ה-15.
+- Endpoint שמייצר את הקובץ להעלאה לאתר רשות המסים.
 
-## 6. Marketing consent — double opt-in + immutable log
+## 6. packages/consent-ledger — double-opt-in
 
-**רציונל חוקי:** סעיף 30א לחוק התקשורת ("חוק הספאם") דורש הסכמה מפורשת מתועדת לפני שיווק.
+**הבעיה**: רישום לרשימת תפוצה בלי אישור כפול = הפרת חוק התקשורת
+(עד 1,000 ש"ח לכל מקבל).
 
-**חבילה: `security-fixes/packages/consent-ledger/`**
-- `ConsentLedger.requestConsent` — שולח מייל אישור עם token חד-פעמי (24 שעות).
-- `confirmConsent` — אישור בקליק.
-- `withdrawConsent` — one-click unsubscribe.
-- **Immutable hash-chain log:** כל רשומה כוללת `prevHash` ו-`hash = sha256(serialize(entry))`. אי-אפשר לערוך רשומה ישנה בלי לשבור את השרשרת. `verifyChain` מאמת.
+**פתרון**: workflow של `requestOptIn` → מייל אישור → `confirmOptIn`,
+plus hash-chain שלא ניתן לזיוף.
 
----
+**איפה ליישם**:
+- בכל מקום שמשתמש מסמן "אני רוצה לקבל עדכונים".
+- `verifyChain` ב-cron יומי לאיתור עבירות מוקדם.
+- Endpoint `/unsubscribe/<token>` שקורא ל-`optOut`.
 
-## 7. JWT_SECRET חזק
+## 7. packages/jwt-config — JWT חזק
 
-**Patch:** `security-fixes/patches/07-jwt-secret-strong.patch`
-- מחליף `"change-me"` ב-placeholder שגורם ל-boot להיכשל אם לא הוחלף.
-- מוסיף הוראת ייצור: `openssl rand -hex 32`.
-- מוסיף `JWT_REFRESH_SECRET`, `JWT_ACCESS_TTL=15m`, `JWT_REFRESH_TTL=7d`.
-- כולל קוד boot-check לסירוב להפעיל אם הסוד חלש.
+**הבעיה**:
+- secrets כמו `"changeme"` או 12 תווים.
+- access token עם TTL של שעות → אם דולף, האקר עובד עליו זמן רב.
+- אין refresh token rotation.
 
----
+**פתרון**:
+- `assertStrongSecret` — בדיקת אורך + entropy + blacklist.
+- `loadJwtConfigFromEnv` — נכשל בהדלקה אם הסביבה חלשה.
+- TTL 15 דקות access, 7 ימים refresh עם rotation.
 
-## 8. OTP cryptographically secure + הסרת console.log
+**איפה ליישם**:
+- בכל service backend בקריאת bootstrap.
+- להריץ `generateSecret()` פעם אחת ולשמור ב-secrets manager (Vault / AWS Secrets).
 
-**Patch:** `security-fixes/patches/08-otp-crypto-random.patch`
-- `Math.random()` → `crypto.randomInt(100000, 1_000_000)`.
-- הסרת `console.log` שחושף את ה-OTP בלוגים.
-- הוספת `import crypto from 'node:crypto'`.
+## 8. packages/otp — OTP מאובטח
 
----
+**הבעיה**: שימוש ב-`Math.random()` ל-OTP — חשיפה מלאה אחרי כמה דגימות.
 
-## 9. KMS / HSM Wrapper
+**פתרון**:
+- `crypto.randomInt(100000, 1000000)` — 6 ספרות מאובטחות.
+- hash + salt לשמירת OTP ב-DB (לא לשמור clear-text).
+- timingSafeEqual להשוואה.
+- 5 ניסיונות + נעילה 15 דקות.
 
-**חבילה: `security-fixes/packages/kms-client/`**
-- API אחיד — `encrypt() / decrypt() / reencrypt()` עם envelope-encryption.
-- 3 backends: AWS KMS, GCP KMS, HashiCorp Vault Transit.
-- AES-256-GCM עבור DEK; KEK בכספת בלבד.
-- Plaintext DEK נמחק (zero-fill) אחרי שימוש.
+**איפה ליישם**:
+- כל מסך אימות SMS / מייל.
+- script CI שמריץ `detectMathRandomUsage` על כל הקוד.
 
----
+## 9. packages/kms-client — KMS Wrapper
 
-## 10. Cookies — secure / httpOnly / sameSite
+**הבעיה**: מפתחות הצפנה ב-env vars / ב-DB בטקסט.
 
-**Patch (template):** `security-fixes/patches/10-cookie-secure-template.patch`
-- helper מרכזי `setSessionCookie`/`clearSessionCookie` עם `httpOnly: true`, `secure: production`, `sameSite: 'strict'`.
-- הוראות `app.set('trust proxy', 1)` בפרודקשן.
-- פקודות grep לאיתור כל קריאות `res.cookie(` הקיימות.
+**פתרון**: envelope encryption — מפתח master ב-KMS, data keys נוצרים פר ערך.
 
-> שים לב: סריקת ה-worktrees לא איתרה שימוש פעיל ב-`res.cookie` בקוד מקור — רק ב-`node_modules`. ה-patch מספק תבנית מוכנה ליישום בקבצים שייווצרו בעת מעבר ל-cookie-based sessions (פרק 11).
+**איפה ליישם**:
+- שדות PII רגישים: `users.id_number`, `users.bank_account`, `customers.tax_id`.
+- ב-prod: `awsKmsBackend({ keyId: 'arn:aws:kms:...' })`.
+- ב-dev: `new InMemoryKmsBackend()`.
 
----
+## 10. packages/cookies — cookies בטוחות
 
-## 11. JWT 7d → 15min + Refresh Token
+**הבעיה**: cookies בלי Secure/HttpOnly/SameSite פתוחות ל-XSS, MITM, CSRF.
 
-**Patch:** `security-fixes/patches/11-jwt-15min-refresh.patch`
-- `signAccessToken` — 15 דקות, sign עם `JWT_SECRET`.
-- `signRefreshToken` — 7 ימים, sign עם `JWT_REFRESH_SECRET` (מפתח נפרד!), עם `tokenId` (jti).
-- Endpoint `POST /auth/refresh` שמאמת ב-DB (revocable).
-- `POST /auth/logout` שמוחק token + מחזיק blacklist.
+**פתרון**: `buildSetCookie` עם defaults מחמירים + פרופילים מוכנים.
 
----
+**איפה ליישם**:
+- בכל express middleware של auth.
+- בכל קריאה ל-`res.cookie(...)` — להחליף ב-`buildSetCookie`.
+- ב-CI: `auditCookieHeader` על תגובות סינטטיות.
 
-## 12. 2FA חובה למנהלים
+## 11. packages/2fa-enforcement — חסימת admin בלי 2FA
 
-**Patch:** `security-fixes/patches/12-2fa-mandatory-admin.patch`
-- Prisma fields: `twoFactorEnabled`, `twoFactorSecret`, `twoFactorBackupCodes[]`.
-- `enforce2FARequirement`: לתפקידים `ADMIN | HR | MANAGER` חייב להיות 2FA.
-- Login flow: דורש TOTP אם פעיל; חוסם אם תפקיד מנהלי + 2FA לא מוגדר → מחזיר `TWO_FACTOR_SETUP_REQUIRED`.
-- helpers ב-`services/totp.ts` עם `otplib`.
+**הבעיה**: בעלי תפקיד admin יכולים להיכנס עם password בלבד.
 
----
+**פתרון**: middleware שמחזיר 401/403 אם המשתמש לא רשם 2FA ואומת.
 
-## 13. Cardcom Zero-PCI
+**איפה ליישם**:
+- לפני כל route תחת `/admin/*`, `/api/admin/*`, `/finance/*`, `/dpo/*`.
+- ב-login flow: לאחר password verification, לקרוא ל-`evaluate()`
+  ולנתב ל-`/login/2fa` אם נדרש.
 
-**Patch:** `security-fixes/patches/13-cardcom-zero-pci.patch`
-- `TokenizeInputSchema` עודכן:
-  - הוסר `cardNumber`, `cvv`, `expiryMonth`, `expiryYear`.
-  - הוסף `lowProfileToken` (token מ-iframe LowProfile).
-  - `.strict()` — אוסר שדות נוספים.
-  - `.refine()` runtime guard נגד הזרקת שדות אסורים.
-- העברה ל-PCI-DSS SAQ-A.
+## 12. packages/pci-validator — בדיקת PAN/CVV
 
----
+**הבעיה**: סכנה שמספרי כרטיס דולפים ללוגים / JWT claims / cache.
 
-## 14. Marketing XSS — DOMPurify + escape
+**פתרון**: Luhn + BIN ranges + סריקת objects רקורסיבית.
 
-**Patch:** `security-fixes/patches/14-marketing-xss-dompurify.patch`
-- `renderTemplate` עכשיו:
-  - מבצע `escapeHtml` על כל merge field כברירת מחדל.
-  - שדות שמתחילים ב-`raw_` עוברים `DOMPurify.sanitize` עם whitelist קטן (b, i, a, br, p, span, ul, ol, li).
-  - הפלט הסופי עובר `DOMPurify.sanitize` עם FORBID_TAGS על script/style/iframe וגם FORBID_ATTR על onerror/onclick וכו'.
-- dependency חדש: `isomorphic-dompurify`.
+**איפה ליישם**:
+- pre-commit hook על כל קבצי `*.log`, `*.json` ב-PR.
+- middleware ב-API gateway: `assertPciSafe(req.body, 'request.body')`.
+- בלוגר: לפני כל `info/error`, להריץ `scanObject` ולהחליף בערך masked.
 
----
+## 13. packages/xss-sanitizer — Wrapper ל-DOMPurify
 
-## הוראות יישום כלליות
+**הבעיה**: HTML משתמשים נשמר ומוצג בלי סינון = stored XSS.
 
-1. **VAT/חוקי:** להריץ patches על הקבצים שלהם, ולסרוק עם `01-vat-global-grep-instructions.md` למקרים נוספים.
-2. **חבילות חדשות:**
-   - להעתיק `security-fixes/packages/<name>/` ל-`packages/` ב-monorepo המתאים.
-   - `npm install` בכל חבילה (ה-deps רשומים ב-`package.json`).
-   - לחבר ל-app: `import { ... } from '@security-fixes/<name>'`.
-3. **ENV:** לעדכן `.env.example` ובסביבת CI/CD לפי patches #7, #11. **חובה** להריץ `openssl rand -hex 32` פעמיים (JWT_SECRET, JWT_REFRESH_SECRET).
-4. **DB migrations:** patch #12 מציע שדות חדשים ב-Prisma. ליצור migration:
-   ```bash
-   npx prisma migrate dev --name add-2fa-fields
-   ```
-5. **בדיקות:** אחרי שכל ה-patches הוחלו, להריץ:
-   - smoke test ל-XSS (patch #14).
-   - יחידה: בדיקת `verifyChain` ב-ConsentLedger.
-   - אינטגרציה: end-to-end SAR + Erasure ב-staging.
+**פתרון**: `sanitizeStripAll` / `sanitizeRichText` עם DOMPurify מוזרק.
+
+**איפה ליישם**:
+- בכל שמירת תוכן משתמש: comment, profile bio, message.
+- ב-mail templates שמכניסים שדות משתמש.
+- ב-PDF generation מתבניות.
+- להזריק את `isomorphic-dompurify` ב-bootstrap: `setPurify(DOMPurify)`.
 
 ---
 
-## הערות אחרונות
+## בדיקות
 
-- כל ה-patches בפורמט unified diff ויכולים להיות מוחלים עם `git apply patches/NN-*.patch` מ-root של הריפו המתאים (יש להתאים נתיב).
-- ה-Patches שלא הסתבקו על קבצים קיימים (10) מוגדרים כ-template; מקום היישום הוגדר במפורש.
-- כל הקבצים נכתבו ב-TypeScript עם `strict` בדעת.
-- העברית RTL במסמכים ובהערות; השמות הטכניים באנגלית כדי לתאם לכלי הפיתוח.
+כל package כולל tests עם vitest. מהרוט:
+
+```bash
+cd security-fixes
+npm install
+npm test
+```
+
+## פריסה לפי worktree
+
+| Worktree | להתקין | קונפיג נוסף |
+|----------|--------|--------------|
+| `backend/billing` | vat, invoicing-fallback, archival | env: VAT_RATE_OVERRIDE? + spec לכל ספק |
+| `backend/auth` | jwt-config, otp, 2fa-enforcement, cookies | env: JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, OTP_HASH_SALT |
+| `backend/payroll` | tax-reports | סדר ייצוא: 102 חודשי, 126 חצי שנתי, 106 שנתי |
+| `backend/payments` | pci-validator, kms-client | חבר ל-Vault Transit |
+| `backend/api` | xss-sanitizer, cookies, 2fa-enforcement | הזרק DOMPurify ב-bootstrap |
+| `backend/users` | privacy, consent-ledger | API חדש: /privacy/sar, /privacy/erasure |
+| `infra/cron` | archival | schedule: 03:00 UTC כל לילה |
+
+</div>

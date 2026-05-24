@@ -1,283 +1,139 @@
 /**
- * KMS Client — envelope encryption
- * ---------------------------------------------------------------
- * החלפה ל-AES key שהיה hard-coded בקוד.
+ * KMS Client — אבסטרקציה מעל AWS KMS / Vault Transit / GCP KMS.
  *
- * הגישה: Envelope encryption.
- *   1) המפתח-הראשי (KEK) חי ב-KMS / Vault — אף פעם לא יוצא משם.
- *   2) לכל קובץ/שדה אנו מבקשים DEK חדש (Data Encryption Key).
- *   3) שומרים את ה-ciphertext + ה-DEK המוצפן (cipherKey).
- *   4) לפענוח: שולחים את ה-cipherKey ל-KMS, מקבלים DEK, מפענחים.
+ * עיקרון envelope encryption:
+ *   1. ה-KMS מחזיק Master Key שאינו עוזב אותו.
+ *   2. עבור כל ערך אנו מבקשים DataKey (plaintext + ciphertext).
+ *   3. מצפינים את הערך עם ה-DataKey (AES-256-GCM).
+ *   4. שומרים את ה-ciphertext של ה-DataKey + nonce + tag + ciphertext.
  *
- * תומך 3 ספקים:
- *   - aws       (AWS KMS)
- *   - gcp       (Google Cloud KMS)
- *   - vault     (HashiCorp Vault Transit engine)
- *
- * שימוש:
- *   const kms = buildKms({ provider: 'aws', keyId: 'arn:aws:kms:...:key/...' });
- *   const sealed = await kms.encrypt(Buffer.from('סודי'));
- *   const plain  = await kms.decrypt(sealed);
+ * המפתח האמיתי לעולם לא נשמר במאגר שלנו.
  */
+import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
+import { z } from 'zod';
 
-import crypto from 'crypto';
+export const EncryptedEnvelopeSchema = z.object({
+  v: z.literal(1),
+  keyId: z.string(),
+  encryptedDataKey: z.string(),
+  iv: z.string(),
+  tag: z.string(),
+  ciphertext: z.string(),
+});
 
-/* ----------------------------------------------------------- */
-/* Types                                                         */
-/* ----------------------------------------------------------- */
-export interface SealedData {
-  /** Ciphertext מוצפן ב-DEK. base64 */
-  ciphertext: string;
-  /** DEK מוצפן ב-KEK של KMS. base64 */
-  cipherKey: string;
-  /** IV בן 12 בייטים (AES-GCM). base64 */
-  iv: string;
-  /** Authentication tag (16 bytes). base64 */
-  authTag: string;
-  /** מטא-מידע על המפתח שבשימוש */
-  keyId: string;
-  algo: 'AES-256-GCM';
-  v: 1;
+export type EncryptedEnvelope = z.infer<typeof EncryptedEnvelopeSchema>;
+
+export interface KmsBackend {
+  /** מזהה ה-master key */
+  readonly keyId: string;
+  /** מייצר DataKey חדש */
+  generateDataKey(): Promise<{ plaintext: Buffer; ciphertext: Buffer }>;
+  /** פותח DataKey מוצפן ל-plaintext */
+  decryptDataKey(ciphertext: Buffer): Promise<Buffer>;
 }
 
-export interface KmsClient {
-  encrypt(plaintext: Buffer, aad?: Buffer): Promise<SealedData>;
-  decrypt(sealed: SealedData, aad?: Buffer): Promise<Buffer>;
-  /** ל-rotate: מפענח עם הישן ומצפין מחדש עם החדש */
-  reencrypt(sealed: SealedData, aad?: Buffer): Promise<SealedData>;
+/**
+ * הצפנת ערך באמצעות envelope encryption.
+ */
+export async function encryptWithEnvelope(
+  plaintext: Buffer | string,
+  kms: KmsBackend,
+): Promise<EncryptedEnvelope> {
+  const data = typeof plaintext === 'string' ? Buffer.from(plaintext, 'utf8') : plaintext;
+  const { plaintext: dataKey, ciphertext: encryptedDataKey } = await kms.generateDataKey();
+  if (dataKey.length !== 32) throw new Error('DataKey חייב להיות 32 בייטים (AES-256)');
+
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', dataKey, iv);
+  const ciphertext = Buffer.concat([cipher.update(data), cipher.final()]);
+  const tag = cipher.getAuthTag();
+
+  // איפוס DataKey מהזיכרון
+  dataKey.fill(0);
+
+  return {
+    v: 1,
+    keyId: kms.keyId,
+    encryptedDataKey: encryptedDataKey.toString('base64'),
+    iv: iv.toString('base64'),
+    tag: tag.toString('base64'),
+    ciphertext: ciphertext.toString('base64'),
+  };
 }
 
-export type KmsProvider = 'aws' | 'gcp' | 'vault';
-
-export interface KmsBuildOptions {
-  provider: KmsProvider;
-  /** AWS: ARN; GCP: 'projects/.../locations/.../keyRings/.../cryptoKeys/...'; Vault: shorthand name */
-  keyId: string;
-  /** Vault address (Vault only) */
-  vaultAddress?: string;
-  /** Vault token (Vault only) */
-  vaultToken?: string;
-}
-
-/* ----------------------------------------------------------- */
-/* Internal AES-GCM helpers                                      */
-/* ----------------------------------------------------------- */
-function aesGcmEncrypt(plaintext: Buffer, dek: Buffer, aad?: Buffer) {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', dek, iv);
-  if (aad) cipher.setAAD(aad);
-  const enc = Buffer.concat([cipher.update(plaintext), cipher.final()]);
-  return { ciphertext: enc, iv, authTag: cipher.getAuthTag() };
-}
-
-function aesGcmDecrypt(ciphertext: Buffer, dek: Buffer, iv: Buffer, authTag: Buffer, aad?: Buffer) {
-  const decipher = crypto.createDecipheriv('aes-256-gcm', dek, iv);
-  decipher.setAuthTag(authTag);
-  if (aad) decipher.setAAD(aad);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-}
-
-/* ----------------------------------------------------------- */
-/* Provider: AWS KMS                                            */
-/* ----------------------------------------------------------- */
-class AwsKmsClient implements KmsClient {
-  private kms: import('@aws-sdk/client-kms').KMSClient;
-  constructor(private keyId: string) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { KMSClient } = require('@aws-sdk/client-kms');
-    this.kms = new KMSClient({});
+export async function decryptEnvelope(
+  envelope: EncryptedEnvelope,
+  kms: KmsBackend,
+): Promise<Buffer> {
+  const parsed = EncryptedEnvelopeSchema.parse(envelope);
+  if (parsed.keyId !== kms.keyId) {
+    throw new Error(`keyId לא תואם: ${parsed.keyId} != ${kms.keyId}`);
   }
-
-  async encrypt(plaintext: Buffer, aad?: Buffer): Promise<SealedData> {
-    const { GenerateDataKeyCommand } = await import('@aws-sdk/client-kms');
-    const dataKey = await this.kms.send(
-      new GenerateDataKeyCommand({ KeyId: this.keyId, KeySpec: 'AES_256' }),
+  const dataKey = await kms.decryptDataKey(Buffer.from(parsed.encryptedDataKey, 'base64'));
+  try {
+    const decipher = createDecipheriv(
+      'aes-256-gcm',
+      dataKey,
+      Buffer.from(parsed.iv, 'base64'),
     );
-    const dek = Buffer.from(dataKey.Plaintext as Uint8Array);
-    const cipherKey = Buffer.from(dataKey.CiphertextBlob as Uint8Array);
-
-    const { ciphertext, iv, authTag } = aesGcmEncrypt(plaintext, dek, aad);
-    dek.fill(0); // wipe plaintext DEK
-
-    return {
-      ciphertext: ciphertext.toString('base64'),
-      cipherKey: cipherKey.toString('base64'),
-      iv: iv.toString('base64'),
-      authTag: authTag.toString('base64'),
-      keyId: this.keyId,
-      algo: 'AES-256-GCM',
-      v: 1,
-    };
-  }
-
-  async decrypt(sealed: SealedData, aad?: Buffer): Promise<Buffer> {
-    const { DecryptCommand } = await import('@aws-sdk/client-kms');
-    const decrypted = await this.kms.send(
-      new DecryptCommand({
-        CiphertextBlob: Buffer.from(sealed.cipherKey, 'base64'),
-        KeyId: sealed.keyId,
-      }),
-    );
-    const dek = Buffer.from(decrypted.Plaintext as Uint8Array);
-    try {
-      return aesGcmDecrypt(
-        Buffer.from(sealed.ciphertext, 'base64'),
-        dek,
-        Buffer.from(sealed.iv, 'base64'),
-        Buffer.from(sealed.authTag, 'base64'),
-        aad,
-      );
-    } finally {
-      dek.fill(0);
-    }
-  }
-
-  async reencrypt(sealed: SealedData, aad?: Buffer): Promise<SealedData> {
-    const plain = await this.decrypt(sealed, aad);
-    try {
-      return await this.encrypt(plain, aad);
-    } finally {
-      plain.fill(0);
-    }
+    decipher.setAuthTag(Buffer.from(parsed.tag, 'base64'));
+    return Buffer.concat([
+      decipher.update(Buffer.from(parsed.ciphertext, 'base64')),
+      decipher.final(),
+    ]);
+  } finally {
+    dataKey.fill(0);
   }
 }
 
-/* ----------------------------------------------------------- */
-/* Provider: GCP KMS                                            */
-/* ----------------------------------------------------------- */
-class GcpKmsClient implements KmsClient {
-  private client: import('@google-cloud/kms').KeyManagementServiceClient;
-  constructor(private keyId: string) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { KeyManagementServiceClient } = require('@google-cloud/kms');
-    this.client = new KeyManagementServiceClient();
+/**
+ * Backend לפיתוח בלבד — מחזיק master key בזיכרון.
+ * אסור לשימוש בייצור!
+ */
+export class InMemoryKmsBackend implements KmsBackend {
+  readonly keyId: string;
+  private master: Buffer;
+  constructor(keyId: string = 'dev-master') {
+    this.keyId = keyId;
+    this.master = randomBytes(32);
   }
-
-  async encrypt(plaintext: Buffer, aad?: Buffer): Promise<SealedData> {
-    const dek = crypto.randomBytes(32);
-    const [resp] = await this.client.encrypt({
-      name: this.keyId,
-      plaintext: dek,
-      additionalAuthenticatedData: aad,
-    });
-
-    const { ciphertext, iv, authTag } = aesGcmEncrypt(plaintext, dek, aad);
-    dek.fill(0);
-
-    return {
-      ciphertext: ciphertext.toString('base64'),
-      cipherKey: Buffer.from(resp.ciphertext as Uint8Array).toString('base64'),
-      iv: iv.toString('base64'),
-      authTag: authTag.toString('base64'),
-      keyId: this.keyId,
-      algo: 'AES-256-GCM',
-      v: 1,
-    };
+  async generateDataKey(): Promise<{ plaintext: Buffer; ciphertext: Buffer }> {
+    const dataKey = randomBytes(32);
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', this.master, iv);
+    const enc = Buffer.concat([cipher.update(dataKey), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    // ciphertext = iv | tag | enc
+    return { plaintext: dataKey, ciphertext: Buffer.concat([iv, tag, enc]) };
   }
-
-  async decrypt(sealed: SealedData, aad?: Buffer): Promise<Buffer> {
-    const [resp] = await this.client.decrypt({
-      name: sealed.keyId,
-      ciphertext: Buffer.from(sealed.cipherKey, 'base64'),
-      additionalAuthenticatedData: aad,
-    });
-    const dek = Buffer.from(resp.plaintext as Uint8Array);
-    try {
-      return aesGcmDecrypt(
-        Buffer.from(sealed.ciphertext, 'base64'),
-        dek,
-        Buffer.from(sealed.iv, 'base64'),
-        Buffer.from(sealed.authTag, 'base64'),
-        aad,
-      );
-    } finally {
-      dek.fill(0);
-    }
-  }
-
-  async reencrypt(sealed: SealedData, aad?: Buffer): Promise<SealedData> {
-    const plain = await this.decrypt(sealed, aad);
-    try {
-      return await this.encrypt(plain, aad);
-    } finally {
-      plain.fill(0);
-    }
+  async decryptDataKey(ciphertext: Buffer): Promise<Buffer> {
+    const iv = ciphertext.subarray(0, 12);
+    const tag = ciphertext.subarray(12, 28);
+    const enc = ciphertext.subarray(28);
+    const decipher = createDecipheriv('aes-256-gcm', this.master, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(enc), decipher.final()]);
   }
 }
 
-/* ----------------------------------------------------------- */
-/* Provider: HashiCorp Vault Transit                             */
-/* ----------------------------------------------------------- */
-class VaultKmsClient implements KmsClient {
-  private vault: ReturnType<typeof import('node-vault')>;
-  constructor(private keyId: string, address?: string, token?: string) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const NodeVault = require('node-vault');
-    this.vault = NodeVault({ endpoint: address ?? process.env.VAULT_ADDR, token: token ?? process.env.VAULT_TOKEN });
-  }
-
-  async encrypt(plaintext: Buffer, aad?: Buffer): Promise<SealedData> {
-    const dek = crypto.randomBytes(32);
-    const wrapped = await this.vault.write(`transit/encrypt/${this.keyId}`, {
-      plaintext: dek.toString('base64'),
-      context: aad ? aad.toString('base64') : undefined,
-    });
-
-    const { ciphertext, iv, authTag } = aesGcmEncrypt(plaintext, dek, aad);
-    dek.fill(0);
-
-    return {
-      ciphertext: ciphertext.toString('base64'),
-      cipherKey: wrapped.data.ciphertext, // 'vault:v1:...'
-      iv: iv.toString('base64'),
-      authTag: authTag.toString('base64'),
-      keyId: this.keyId,
-      algo: 'AES-256-GCM',
-      v: 1,
-    };
-  }
-
-  async decrypt(sealed: SealedData, aad?: Buffer): Promise<Buffer> {
-    const unwrapped = await this.vault.write(`transit/decrypt/${sealed.keyId}`, {
-      ciphertext: sealed.cipherKey,
-      context: aad ? aad.toString('base64') : undefined,
-    });
-    const dek = Buffer.from(unwrapped.data.plaintext, 'base64');
-    try {
-      return aesGcmDecrypt(
-        Buffer.from(sealed.ciphertext, 'base64'),
-        dek,
-        Buffer.from(sealed.iv, 'base64'),
-        Buffer.from(sealed.authTag, 'base64'),
-        aad,
-      );
-    } finally {
-      dek.fill(0);
-    }
-  }
-
-  async reencrypt(sealed: SealedData, aad?: Buffer): Promise<SealedData> {
-    const plain = await this.decrypt(sealed, aad);
-    try {
-      return await this.encrypt(plain, aad);
-    } finally {
-      plain.fill(0);
-    }
-  }
+/**
+ * Stubs עבור AWS KMS / Vault — לימדנו ב-prod להחליף ב-SDK אמיתי.
+ */
+export interface AwsKmsConfig {
+  region: string;
+  keyId: string; // arn או alias
 }
 
-/* ----------------------------------------------------------- */
-/* Factory                                                      */
-/* ----------------------------------------------------------- */
-export function buildKms(opts: KmsBuildOptions): KmsClient {
-  switch (opts.provider) {
-    case 'aws':
-      return new AwsKmsClient(opts.keyId);
-    case 'gcp':
-      return new GcpKmsClient(opts.keyId);
-    case 'vault':
-      return new VaultKmsClient(opts.keyId, opts.vaultAddress, opts.vaultToken);
-    default:
-      throw new Error(`KMS provider לא נתמך: ${opts.provider as string}`);
-  }
+export function awsKmsBackend(_cfg: AwsKmsConfig): KmsBackend {
+  throw new Error('להתקין @aws-sdk/client-kms ולחבר ב-prod. ראה SECURITY-RUNBOOK.md');
+}
+
+export interface VaultConfig {
+  baseUrl: string;
+  token: string;
+  transitKey: string;
+}
+
+export function vaultTransitBackend(_cfg: VaultConfig): KmsBackend {
+  throw new Error('להתקין node-vault ולחבר ב-prod. ראה SECURITY-RUNBOOK.md');
 }

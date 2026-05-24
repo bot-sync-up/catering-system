@@ -1,21 +1,13 @@
 {
   "name": "@security-fixes/privacy",
   "version": "1.0.0",
-  "description": "Subject Access Request, Right To Be Forgotten, and audit log helpers - חוק הגנת הפרטיות תיקון 13",
+  "description": "זכויות נושא מידע - חוק הגנת הפרטיות (ישראל) + GDPR",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "lint": "eslint . --ext .ts"
+    "test": "vitest run"
   },
   "dependencies": {
-    "express": "^4.19.0",
-    "zod": "^3.23.0",
-    "@prisma/client": "^5.0.0"
-  },
-  "devDependencies": {
-    "@types/express": "^4.17.0",
-    "typescript": "^5.4.0"
-  },
-  "license": "UNLICENSED"
+    "zod": "^3.22.4"
+  }
 }

@@ -1,14 +1,13 @@
 {
   "name": "@security-fixes/tax-reports",
   "version": "1.0.0",
-  "description": "Israeli tax form generators (Form 106, 102, 126) in Mai101 XML format",
+  "description": "טופסי דיווח לרשות המסים בישראל (106, 102, 126) במבנה Mai101 XML",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "license": "UNLICENSED",
-  "dependencies": {
-    "xmlbuilder2": "^3.1.1"
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
   },
-  "devDependencies": {
-    "typescript": "^5.4.0"
+  "dependencies": {
+    "zod": "^3.22.4"
   }
 }

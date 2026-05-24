@@ -1,0 +1,13 @@
+{
+  "name": "@security-fixes/jwt-config",
+  "version": "1.0.0",
+  "description": "תצורת JWT עם secrets חזקים ו-refresh tokens",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}
