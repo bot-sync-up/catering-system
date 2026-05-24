@@ -1,0 +1,104 @@
+name: Deploy Production
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag or SHA to deploy"
+        required: true
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  approve:
+    name: Manual approval
+    runs-on: ubuntu-latest
+    environment:
+      name: production-approval
+    steps:
+      - run: echo "Approved by ${{ github.actor }}"
+
+  deploy:
+    name: Deploy production
+    needs: [approve]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://www.example.co.il
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Login to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push images
+        uses: docker/bake-action@v4
+        with:
+          push: true
+          set: |
+            *.tags=ghcr.io/${{ github.repository }}/{{.Name}}:${{ github.ref_name }}
+            *.tags=ghcr.io/${{ github.repository }}/{{.Name}}:prod-latest
+
+      - name: Backup DB before deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: /opt/app/deployment/backups/backup-postgres.sh pre-deploy
+
+      - name: Blue/green deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/app
+            git fetch --tags
+            git checkout ${{ github.ref_name }}
+            docker compose -f deployment/docker/docker-compose.yml \
+                           -f deployment/docker/docker-compose.prod.yml \
+                           pull
+            # rolling update — gateway first, then web/worker
+            docker compose -f deployment/docker/docker-compose.yml \
+                           -f deployment/docker/docker-compose.prod.yml \
+                           up -d --no-deps --scale gateway=6 gateway
+            sleep 30
+            docker compose -f deployment/docker/docker-compose.yml \
+                           -f deployment/docker/docker-compose.prod.yml \
+                           up -d --no-deps --scale gateway=3 gateway
+            docker compose -f deployment/docker/docker-compose.yml \
+                           -f deployment/docker/docker-compose.prod.yml \
+                           up -d --no-deps next worker
+
+      - name: Run smoke tests
+        run: |
+          set -e
+          curl -fsS https://www.example.co.il/healthz
+          curl -fsS https://portal.example.co.il/api/health
+          curl -fsS https://admin.example.co.il/healthz
+
+      - name: Rollback on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/app
+            git checkout $(git tag --sort=-creatordate | sed -n '2p')
+            docker compose -f deployment/docker/docker-compose.yml \
+                           -f deployment/docker/docker-compose.prod.yml \
+                           up -d

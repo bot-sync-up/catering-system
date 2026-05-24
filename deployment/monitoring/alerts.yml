@@ -1,0 +1,90 @@
+groups:
+  - name: system
+    interval: 30s
+    rules:
+      - alert: HighCPU
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 10m
+        labels: { severity: warning, team: ops }
+        annotations:
+          summary: "CPU גבוה ב-{{ $labels.instance }}"
+          description: "ניצולת CPU > 85% במשך 10 דקות (ערך נוכחי: {{ $value }}%)"
+
+      - alert: HighMemory
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 10m
+        labels: { severity: warning, team: ops }
+        annotations:
+          summary: "זיכרון גבוה ב-{{ $labels.instance }}"
+
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels: { severity: critical, team: ops }
+        annotations:
+          summary: "דיסק כמעט מלא ב-{{ $labels.instance }}"
+
+      - alert: InstanceDown
+        expr: up == 0
+        for: 2m
+        labels: { severity: critical, team: ops }
+        annotations:
+          summary: "Instance {{ $labels.instance }} למטה"
+
+  - name: app
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels: { severity: critical, team: backend }
+        annotations:
+          summary: "שיעור שגיאות 5xx > 5%"
+
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum by(le, route) (rate(http_request_duration_seconds_bucket[5m]))) > 1.0
+        for: 10m
+        labels: { severity: warning, team: backend }
+        annotations:
+          summary: "P95 latency > 1s על מסלול {{ $labels.route }}"
+
+      - alert: QueueBacklog
+        expr: bullmq_queue_waiting{queue=~"ocr|pdf|email"} > 500
+        for: 5m
+        labels: { severity: warning, team: backend }
+        annotations:
+          summary: "תור {{ $labels.queue }} עם > 500 משימות ממתינות"
+
+      - alert: PaymentFailures
+        expr: sum(rate(payment_failures_total[15m])) > 5
+        for: 5m
+        labels: { severity: critical, team: payments }
+        annotations:
+          summary: "כשלי תשלום מוגברים ({{ $value }} לדקה)"
+
+  - name: db
+    interval: 30s
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels: { severity: critical, team: ops }
+        annotations: { summary: "Postgres לא זמין" }
+
+      - alert: PostgresHighConnections
+        expr: sum(pg_stat_activity_count) / pg_settings_max_connections > 0.85
+        for: 5m
+        labels: { severity: warning, team: ops }
+        annotations: { summary: "ניצולת חיבורי Postgres > 85%" }
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels: { severity: critical, team: ops }
+        annotations: { summary: "Redis לא זמין" }
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 10m
+        labels: { severity: warning, team: ops }
+        annotations: { summary: "Redis מעל 90% ניצולת זיכרון" }
