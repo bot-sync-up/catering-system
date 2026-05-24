@@ -1,0 +1,41 @@
+{
+  "name": "@syncup/privacy-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "פורטל פרטיות — יישום תיקון 13 לחוק הגנת הפרטיות (8/2025)",
+  "scripts": {
+    "dev": "next dev -p 3030",
+    "build": "next build",
+    "start": "next start -p 3030",
+    "lint": "next lint",
+    "worker:sar": "tsx src/workers/sarBuilder.ts",
+    "worker:erasure": "tsx src/workers/erasureExecutor.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.1",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.1",
+    "jszip": "^3.10.1",
+    "nanoid": "^5.0.9",
+    "pdfkit": "^0.15.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@types/pdfkit": "^0.13.5",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
