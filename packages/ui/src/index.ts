@@ -1,2 +1,3 @@
-export { cn } from "./utils";
-export { Button } from "./button";
+// ספריית רכיבים משותפת (RTL, Tailwind) - נקודת כניסה ראשית
+// TODO: מילוי בעת מיגרציה מ-worktree המקור
+export const PACKAGE_NAME = "ui";

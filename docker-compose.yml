@@ -1,0 +1,89 @@
+# docker-compose מאוחד למערכת קייטרינג
+# הרצה: docker compose up -d
+# שירותי תשתית (postgres+redis) + כל ה-apps. ה-apps נבנים מ-Dockerfile מקומי.
+
+services:
+  # ============ Infrastructure ============
+  postgres:
+    image: postgres:16-alpine
+    container_name: catering-postgres
+    environment:
+      POSTGRES_USER: catering
+      POSTGRES_PASSWORD: catering
+      POSTGRES_DB: catering
+      TZ: Asia/Jerusalem
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "catering"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: catering-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  # ============ Gateway (01) ============
+  gateway:
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
+    container_name: catering-gateway
+    ports:
+      - "8080:8080"
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ============ Worker (12 OCR + 22 BI + 23 mailers) ============
+  worker:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    container_name: catering-worker
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ============ Apps (Next.js) ============
+  admin:        { build: { context: ., dockerfile: apps/admin/Dockerfile },        ports: ["3001:3001"], env_file: .env, depends_on: [postgres, redis] }
+  crm:          { build: { context: ., dockerfile: apps/crm/Dockerfile },          ports: ["3005:3005"], env_file: .env, depends_on: [postgres, redis] }
+  orders:       { build: { context: ., dockerfile: apps/orders/Dockerfile },       ports: ["3006:3006"], env_file: .env, depends_on: [postgres, redis] }
+  web-portal:   { build: { context: ., dockerfile: apps/web-portal/Dockerfile },   ports: ["3007:3007"], env_file: .env, depends_on: [postgres, redis] }
+  menus:        { build: { context: ., dockerfile: apps/menus/Dockerfile },        ports: ["3008:3008"], env_file: .env, depends_on: [postgres, redis] }
+  recipes:      { build: { context: ., dockerfile: apps/recipes/Dockerfile },      ports: ["3009:3009"], env_file: .env, depends_on: [postgres, redis] }
+  inventory:    { build: { context: ., dockerfile: apps/inventory/Dockerfile },    ports: ["3010:3010"], env_file: .env, depends_on: [postgres, redis] }
+  suppliers:    { build: { context: ., dockerfile: apps/suppliers/Dockerfile },    ports: ["3011:3011"], env_file: .env, depends_on: [postgres, redis] }
+  ocr:          { build: { context: ., dockerfile: apps/ocr/Dockerfile },          ports: ["3012:3012"], env_file: .env, depends_on: [postgres, redis] }
+  events:       { build: { context: ., dockerfile: apps/events/Dockerfile },       ports: ["3013:3013"], env_file: .env, depends_on: [postgres, redis] }
+  logistics:    { build: { context: ., dockerfile: apps/logistics/Dockerfile },    ports: ["3014:3014"], env_file: .env, depends_on: [postgres, redis] }
+  hr:           { build: { context: ., dockerfile: apps/hr/Dockerfile },           ports: ["3015:3015"], env_file: .env, depends_on: [postgres, redis] }
+  payroll:      { build: { context: ., dockerfile: apps/payroll/Dockerfile },      ports: ["3016:3016"], env_file: .env, depends_on: [postgres, redis] }
+  invoices:     { build: { context: ., dockerfile: apps/invoices/Dockerfile },     ports: ["3017:3017"], env_file: .env, depends_on: [postgres, redis] }
+  expenses:     { build: { context: ., dockerfile: apps/expenses/Dockerfile },     ports: ["3020:3020"], env_file: .env, depends_on: [postgres, redis] }
+  fleet:        { build: { context: ., dockerfile: apps/fleet/Dockerfile },        ports: ["3021:3021"], env_file: .env, depends_on: [postgres, redis] }
+  bi:           { build: { context: ., dockerfile: apps/bi/Dockerfile },           ports: ["3022:3022"], env_file: .env, depends_on: [postgres, redis] }
+  marketing:    { build: { context: ., dockerfile: apps/marketing/Dockerfile },    ports: ["3023:3023"], env_file: .env, depends_on: [postgres, redis] }
+  public-site:  { build: { context: ., dockerfile: apps/public-site/Dockerfile },  ports: ["3024:3024"], env_file: .env, depends_on: [postgres, redis] }
+
+volumes:
+  postgres-data:
+  redis-data:

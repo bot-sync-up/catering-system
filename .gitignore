@@ -1,60 +1,47 @@
-# dependencies
+# Dependencies
 node_modules/
 .pnp
 .pnp.js
+.pnpm-store/
 
-# next.js
-.next/
-out/
-
-# builds
+# Builds
 dist/
 build/
-*.tsbuildinfo
+out/
+.next/
+.turbo/
+.expo/
+coverage/
 
-# env
+# Env
 .env
 .env.local
 .env.*.local
-!.env.example
 
-# turbo
-.turbo
-
-# logs
+# Logs
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 
-# IDEs
+# IDE
 .vscode/
 .idea/
 *.swp
-*.swo
 
 # OS
 .DS_Store
 Thumbs.db
 
 # Prisma
-*.db
-*.db-journal
-prisma/dev.db*
+prisma/migrations/*/migration_lock.toml.bak
 
-# Uploads (runtime)
-uploads/
-public/uploads/
+# Imported worktree leftovers (לא להעלות)
+scripts/_imported/
 
-# Tests
-coverage/
-.nyc_output/
-
-# Caches
-.cache/
-.pytest_cache/
-
-# Test artifacts
-playwright-report/
-test-results/
+# Mobile
+*.jks
+*.p12
+*.key
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist

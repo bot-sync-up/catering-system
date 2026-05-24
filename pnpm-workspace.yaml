@@ -1,4 +1,4 @@
-# pnpm workspace - monorepo קייטרינג + פעולות עסקיות
+# pnpm workspace - מערכת קייטרינג מאוחדת
 # כל ה-apps וה-packages מנוהלים מכאן
 packages:
   - "apps/*"

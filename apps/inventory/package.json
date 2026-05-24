@@ -1,28 +1,27 @@
 {
-  "name": "inventory",
-  "version": "1.0.0",
-  "description": "מערכת ניהול מלאי דו-רמתית למטבחים — חומר גלם + מנות, מטבח + מחסן, FIFO, תפוגה, התראות, רכש אוטומטי, ספירת מלאי, שערוך, פחת",
-  "main": "src/server.js",
-  "type": "commonjs",
+  "name": "@catering/inventory",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ניהול מלאי (10)",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "seed": "node src/lib/db/seed.js",
-    "test": "node tests/run.js"
+    "dev": "next dev --port 3010",
+    "build": "next build",
+    "start": "next start --port 3010",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "sql.js": "^1.10.3",
-    "ejs": "^3.1.10",
-    "bwip-js": "^4.5.1",
-    "pdfkit": "^0.15.0",
-    "uuid": "^10.0.0",
-    "dayjs": "^1.11.13"
+    "@catering/db": "workspace:*",
+    "@catering/auth": "workspace:*",
+    "@catering/audit": "workspace:*",
+    "@catering/contracts": "workspace:*",
+    "@catering/ui": "workspace:*",
+    "@catering/utils": "workspace:*"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
-  },
-  "engines": {
-    "node": ">=18"
+    "typescript": "^5.6.3",
+    "@types/node": "^22.10.0",
+    "vitest": "^2.1.8"
   }
 }

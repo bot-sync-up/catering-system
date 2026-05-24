@@ -6,11 +6,7 @@
     "DATABASE_URL",
     "REDIS_URL",
     "JWT_SECRET",
-    "NEXTAUTH_SECRET",
-    "SENDGRID_API_KEY",
-    "ANTHROPIC_API_KEY",
-    "ICOUNT_API_TOKEN",
-    "CARDCOM_TERMINAL"
+    "NEXTAUTH_SECRET"
   ],
   "tasks": {
     "build": {

@@ -1,5 +1,3 @@
-export * from './types.js';
-export * from './templates.js';
-export * from './pdf.js';
-export * from './storage.js';
-export * from './reminders.js';
+// Zod schemas + טיפוסים משותפים בין שירותים - נקודת כניסה ראשית
+// TODO: מילוי בעת מיגרציה מ-worktree המקור
+export const PACKAGE_NAME = "contracts";

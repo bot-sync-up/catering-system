@@ -1,32 +1,17 @@
 {
-  "name": "@aneh-hashoel/db",
+  "name": "@catering/db",
   "version": "0.1.0",
   "private": true,
-  "description": "Prisma schema + client for the 'Aneh et HaShoel' platform — multi-tenant ERP/CRM for catering/events business management.",
+  "description": "Prisma schema, מודלים, מיגרציות (02 + משותף)",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "generate": "prisma generate",
-    "migrate:dev": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy",
-    "migrate:reset": "prisma migrate reset --force",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts",
-    "format": "prisma format",
-    "validate": "prisma validate"
-  },
-  "prisma": {
-    "schema": "prisma/schema.prisma",
-    "seed": "tsx prisma/seed.ts"
-  },
-  "dependencies": {
-    "@prisma/client": "^5.22.0"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "prisma": "^5.22.0",
-    "tsx": "^4.19.2",
     "typescript": "^5.6.3",
-    "@types/node": "^22.9.0"
+    "vitest": "^2.1.8"
   }
 }

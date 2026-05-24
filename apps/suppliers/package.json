@@ -1,18 +1,27 @@
 {
-  "name": "suppliers-po-system",
-  "version": "1.0.0",
-  "description": "מערכת ספקים והזמנות רכש (PO) — עברית RTL",
-  "main": "src/server.js",
+  "name": "@catering/suppliers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ניהול ספקים (11)",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node src/server.js",
-    "seed": "node src/db/seed.js",
-    "test": "node src/test/smoke.js"
-  },
-  "engines": {
-    "node": ">=18"
+    "dev": "next dev --port 3011",
+    "build": "next build",
+    "start": "next start --port 3011",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "express": "^4.21.0"
+    "@catering/db": "workspace:*",
+    "@catering/auth": "workspace:*",
+    "@catering/audit": "workspace:*",
+    "@catering/contracts": "workspace:*",
+    "@catering/ui": "workspace:*",
+    "@catering/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^22.10.0",
+    "vitest": "^2.1.8"
   }
 }

@@ -1,19 +1,27 @@
 {
-  "name": "marketing-platform",
-  "version": "1.0.0",
+  "name": "@catering/marketing",
+  "version": "0.1.0",
   "private": true,
-  "description": "Marketing + Campaigns + Chatbot platform (RTL Hebrew)",
-  "workspaces": ["server", "client"],
+  "description": "פלטפורמת שיווק (23)",
   "scripts": {
-    "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
-    "dev:server": "npm --workspace server run dev",
-    "dev:client": "npm --workspace client run dev",
-    "build": "npm --workspace server run build && npm --workspace client run build",
-    "start": "npm --workspace server run start",
-    "db:migrate": "npm --workspace server run db:migrate",
-    "db:generate": "npm --workspace server run db:generate"
+    "dev": "next dev --port 3023",
+    "build": "next build",
+    "start": "next start --port 3023",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@catering/db": "workspace:*",
+    "@catering/auth": "workspace:*",
+    "@catering/audit": "workspace:*",
+    "@catering/contracts": "workspace:*",
+    "@catering/ui": "workspace:*",
+    "@catering/utils": "workspace:*"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "typescript": "^5.6.3",
+    "@types/node": "^22.10.0",
+    "vitest": "^2.1.8"
   }
 }

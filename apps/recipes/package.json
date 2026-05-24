@@ -1,32 +1,27 @@
 {
-  "name": "kitchen-recipes",
+  "name": "@catering/recipes",
   "version": "0.1.0",
   "private": true,
+  "description": "ניהול מתכונים ועלויות (09)",
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev --port 3009",
     "build": "next build",
-    "start": "next start -p 3000",
-    "lint": "next lint",
-    "db:push": "prisma db push",
-    "db:generate": "prisma generate",
-    "db:seed": "node scripts/seed.js"
+    "start": "next start --port 3009",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
-    "next": "14.2.15",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "diff": "^7.0.0",
-    "date-fns": "^4.1.0"
+    "@catering/db": "workspace:*",
+    "@catering/auth": "workspace:*",
+    "@catering/audit": "workspace:*",
+    "@catering/contracts": "workspace:*",
+    "@catering/ui": "workspace:*",
+    "@catering/utils": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.7.4",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.0",
-    "prisma": "^5.22.0",
-    "typescript": "^5.6.2",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13"
+    "typescript": "^5.6.3",
+    "@types/node": "^22.10.0",
+    "vitest": "^2.1.8"
   }
 }

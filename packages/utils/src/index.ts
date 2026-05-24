@@ -1,6 +1,3 @@
-export * from "./hebrew";
-export * from "./id";
-
-export function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${String(value)}`);
-}
+// פונקציות עזר (תאריכים עבריים, מטבע, אזורי זמן) - נקודת כניסה ראשית
+// TODO: מילוי בעת מיגרציה מ-worktree המקור
+export const PACKAGE_NAME = "utils";

@@ -22,9 +22,7 @@
       "@catering/contracts": ["packages/contracts/src"],
       "@catering/ui": ["packages/ui/src"],
       "@catering/queue": ["packages/queue/src"],
-      "@catering/utils": ["packages/utils/src"],
-      "@catering/config": ["packages/config/src"],
-      "@catering/integrations/*": ["packages/integrations/*/src"]
+      "@catering/utils": ["packages/utils/src"]
     }
   },
   "exclude": ["node_modules", "dist", ".next", "build", "out"]
