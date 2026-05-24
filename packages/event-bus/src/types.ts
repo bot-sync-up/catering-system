@@ -1,263 +1,333 @@
 /**
- * types.ts — הגדרות הטיפוסים של כל ה-domain events במערכת.
+ * Domain Events - הגדרת כל האירועים העסקיים בפלטפורמת הקייטרינג.
  *
- * כל event מכיל:
- *   - id      : מזהה ייחודי לאירוע (idempotency key)
- *   - type    : שם ה-event (string literal)
- *   - occurredAt : ISO timestamp
- *   - payload : ה-data של ה-event
- *   - metadata: meta נוסף (traceId, correlationId, source וכו')
- *
- * רשימת ה-events נשמרת ב-`EventTypeMap` כדי לאפשר type safety מלאה
- * ב-`publish` וב-`subscribe`.
+ * כל אירוע מכיל metadata סטנדרטי (id, timestamp, source, correlationId)
+ * ו-payload ספציפי לסוג האירוע.
  */
 
 export interface EventMetadata {
-  /** מזהה traceId לקישור בין אירועים באותו flow */
-  traceId?: string;
-  /** correlationId — לקישור בין בקשה לתגובה */
-  correlationId?: string;
-  /** מקור האירוע (איזה service פרסם אותו) */
-  source?: string;
-  /** מי המשתמש שיזם את הפעולה */
-  userId?: string;
-  /** ניסיון שלישי? לשימוש פנימי של retry/DLQ */
-  attempt?: number;
-}
-
-export interface DomainEvent<TType extends string, TPayload> {
+  /** מזהה ייחודי של האירוע (UUID v4) */
   id: string;
-  type: TType;
-  occurredAt: string;
-  payload: TPayload;
-  metadata?: EventMetadata;
+  /** חותמת זמן ISO 8601 */
+  timestamp: string;
+  /** מקור האירוע - שם השירות שפלט אותו */
+  source: string;
+  /** מזהה מתאם לשרשור אירועים (saga / flow) */
+  correlationId?: string;
+  /** מזהה האירוע הקודם בשרשרת */
+  causationId?: string;
+  /** גרסת ה-schema של ה-payload */
+  schemaVersion: number;
 }
 
-// ---------------------------------------------------------------------------
-//                              Lead / CRM
-// ---------------------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────
+// CRM / Lead
+// ────────────────────────────────────────────────────────────────
 
 export interface LeadCreatedPayload {
   leadId: string;
   customerName: string;
   phone: string;
   email?: string;
-  source?: string;
-  estimatedValue?: number;
+  source: 'website' | 'phone' | 'referral' | 'portal';
+  eventType?: string;
+  guestsEstimate?: number;
+  eventDateEstimate?: string;
 }
 
-// ---------------------------------------------------------------------------
-//                              Quotes
-// ---------------------------------------------------------------------------
+export interface LeadQualifiedPayload {
+  leadId: string;
+  qualifiedBy: string;
+  score: number;
+  notes?: string;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Quotes
+// ────────────────────────────────────────────────────────────────
 
 export interface QuoteSentPayload {
   quoteId: string;
   leadId: string;
-  amount: number;
-  currency: string;
-  items: Array<{ sku: string; quantity: number; unitPrice: number }>;
+  customerId: string;
+  totalAmount: number;
+  currency: 'ILS' | 'USD' | 'EUR';
+  validUntil: string;
+  items: QuoteItem[];
+}
+
+export interface QuoteItem {
+  sku: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
 }
 
 export interface QuoteAcceptedPayload {
   quoteId: string;
-  leadId: string;
+  customerId: string;
   acceptedAt: string;
+  acceptedBy: string;
 }
 
-// ---------------------------------------------------------------------------
-//                              Orders
-// ---------------------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────
+// Orders
+// ────────────────────────────────────────────────────────────────
 
 export interface OrderPlacedPayload {
   orderId: string;
-  customerId: string;
   quoteId?: string;
+  customerId: string;
+  eventId?: string;
   totalAmount: number;
-  currency: string;
-  eventDate?: string;
-  items: Array<{ sku: string; quantity: number; unitPrice: number }>;
+  items: OrderItem[];
+  scheduledDate: string;
+  deliveryAddress?: string;
+}
+
+export interface OrderItem {
+  sku: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  notes?: string;
 }
 
 export interface OrderApprovedPayload {
   orderId: string;
   approvedBy: string;
+  approvedAt: string;
 }
 
 export interface OrderCancelledPayload {
   orderId: string;
   reason: string;
   cancelledBy: string;
+  cancelledAt: string;
   refundRequired: boolean;
 }
 
-// ---------------------------------------------------------------------------
-//                              Payments
-// ---------------------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────
+// Portal
+// ────────────────────────────────────────────────────────────────
+
+export interface PortalSubmittedPayload {
+  submissionId: string;
+  customerId: string;
+  formType: 'order' | 'inquiry' | 'event-booking';
+  data: Record<string, unknown>;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Payments
+// ────────────────────────────────────────────────────────────────
 
 export interface PaymentReceivedPayload {
   paymentId: string;
-  orderId: string;
+  invoiceId?: string;
+  orderId?: string;
   amount: number;
-  currency: string;
-  method: 'credit_card' | 'bank_transfer' | 'cash' | 'cheque';
-  externalRef?: string;
+  currency: 'ILS' | 'USD' | 'EUR';
+  method: 'credit-card' | 'bank-transfer' | 'cash' | 'check';
+  reference: string;
+  receivedAt: string;
 }
 
 export interface PaymentFailedPayload {
   paymentId: string;
-  orderId: string;
+  invoiceId?: string;
   amount: number;
   reason: string;
   errorCode?: string;
+  attemptNumber: number;
+  failedAt: string;
 }
 
-// ---------------------------------------------------------------------------
-//                              Invoices
-// ---------------------------------------------------------------------------
+export interface PaymentCapturedPayload {
+  paymentId: string;
+  invoiceId: string;
+  amount: number;
+  cardcomTransactionId: string;
+  capturedAt: string;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Invoices
+// ────────────────────────────────────────────────────────────────
 
 export interface InvoiceIssuedPayload {
   invoiceId: string;
-  orderId: string;
-  amount: number;
-  currency: string;
-  externalRef?: string;
+  orderId?: string;
+  customerId: string;
+  totalAmount: number;
+  currency: 'ILS' | 'USD' | 'EUR';
+  issuedAt: string;
+  dueDate: string;
+  items: InvoiceItem[];
+}
+
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  vatRate: number;
 }
 
 export interface InvoicePaidPayload {
   invoiceId: string;
   paidAt: string;
   paymentId: string;
+  fullyPaid: boolean;
 }
 
-// ---------------------------------------------------------------------------
-//                              Events (catering)
-// ---------------------------------------------------------------------------
+export interface InvoiceDuePayload {
+  invoiceId: string;
+  customerId: string;
+  amount: number;
+  dueDate: string;
+  daysOverdue: number;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Events (אירועי קייטרינג)
+// ────────────────────────────────────────────────────────────────
 
 export interface EventScheduledPayload {
   eventId: string;
   orderId: string;
-  scheduledAt: string;
+  customerId: string;
+  scheduledDate: string;
   venue: string;
-  guests: number;
+  guestsCount: number;
+  eventType: string;
 }
 
 export interface EventCompletedPayload {
   eventId: string;
   completedAt: string;
+  actualGuests?: number;
   notes?: string;
 }
 
-// ---------------------------------------------------------------------------
-//                              Delivery
-// ---------------------------------------------------------------------------
+export interface EventReadyPayload {
+  eventId: string;
+  orderId: string;
+  readyAt: string;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Delivery / Logistics
+// ────────────────────────────────────────────────────────────────
 
 export interface DeliveryDispatchedPayload {
   deliveryId: string;
+  eventId?: string;
   orderId: string;
   driverId: string;
+  vehicleId: string;
   dispatchedAt: string;
+  estimatedArrival: string;
 }
 
 export interface DeliveryCompletedPayload {
   deliveryId: string;
-  orderId: string;
   completedAt: string;
-  signature?: string;
+  signedBy?: string;
+  notes?: string;
 }
 
-// ---------------------------------------------------------------------------
-//                              Inventory / Purchasing
-// ---------------------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────
+// Inventory / Purchasing
+// ────────────────────────────────────────────────────────────────
 
 export interface InventoryLowPayload {
   sku: string;
-  currentQty: number;
-  minQty: number;
-  warehouse?: string;
+  productName: string;
+  currentQuantity: number;
+  thresholdQuantity: number;
+  reorderQuantity: number;
+  warehouseId: string;
 }
 
 export interface InventoryReceivedPayload {
+  receivedId: string;
+  poNumber?: string;
   sku: string;
-  receivedQty: number;
-  purchaseOrderId?: string;
-  warehouse?: string;
+  quantity: number;
+  warehouseId: string;
+  receivedAt: string;
 }
 
-// ---------------------------------------------------------------------------
-//                              HR / Payroll
-// ---------------------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────
+// HR / Payroll
+// ────────────────────────────────────────────────────────────────
 
 export interface EmployeeClockedPayload {
   employeeId: string;
-  action: 'in' | 'out';
-  at: string;
+  action: 'clock-in' | 'clock-out';
+  timestamp: string;
   location?: string;
+  eventId?: string;
 }
 
 export interface PayrollCalculatedPayload {
   payrollId: string;
-  periodStart: string;
-  periodEnd: string;
-  totalAmount: number;
-  employeeCount: number;
+  employeeId: string;
+  period: string;
+  hoursWorked: number;
+  grossAmount: number;
+  netAmount: number;
+  calculatedAt: string;
 }
 
-// ---------------------------------------------------------------------------
-//                              EventTypeMap
-// ---------------------------------------------------------------------------
+export interface MonthClosedPayload {
+  period: string;
+  closedAt: string;
+  closedBy: string;
+}
 
-/**
- * מיפוי שם-event → טיפוס payload.
- * משמש לכל ה-type safety בפרויקט.
- */
-export interface EventTypeMap {
+// ────────────────────────────────────────────────────────────────
+// Event Map - מיפוי טייפ-מסטר של כל האירועים
+// ────────────────────────────────────────────────────────────────
+
+export interface DomainEventMap {
   'lead.created': LeadCreatedPayload;
+  'lead.qualified': LeadQualifiedPayload;
   'quote.sent': QuoteSentPayload;
   'quote.accepted': QuoteAcceptedPayload;
   'order.placed': OrderPlacedPayload;
   'order.approved': OrderApprovedPayload;
   'order.cancelled': OrderCancelledPayload;
+  'portal.submitted': PortalSubmittedPayload;
   'payment.received': PaymentReceivedPayload;
   'payment.failed': PaymentFailedPayload;
+  'payment.captured': PaymentCapturedPayload;
   'invoice.issued': InvoiceIssuedPayload;
   'invoice.paid': InvoicePaidPayload;
+  'invoice.due': InvoiceDuePayload;
   'event.scheduled': EventScheduledPayload;
   'event.completed': EventCompletedPayload;
+  'event.ready': EventReadyPayload;
   'delivery.dispatched': DeliveryDispatchedPayload;
   'delivery.completed': DeliveryCompletedPayload;
   'inventory.low': InventoryLowPayload;
   'inventory.received': InventoryReceivedPayload;
   'employee.clocked': EmployeeClockedPayload;
   'payroll.calculated': PayrollCalculatedPayload;
+  'month.closed': MonthClosedPayload;
 }
 
-export type EventName = keyof EventTypeMap;
+export type DomainEventName = keyof DomainEventMap;
 
-export type AnyDomainEvent = {
-  [K in EventName]: DomainEvent<K, EventTypeMap[K]>;
-}[EventName];
-
-export type EventHandler<TName extends EventName> = (
-  event: DomainEvent<TName, EventTypeMap[TName]>
-) => Promise<void> | void;
-
-/** אופציות לפרסום event (delay, priority וכו') */
-export interface PublishOptions {
-  delayMs?: number;
-  priority?: number;
-  attempts?: number;
-  /** ביטול הוספת event_id אוטומטי — לשימוש בבדיקות */
-  id?: string;
+export interface DomainEvent<K extends DomainEventName = DomainEventName> {
+  name: K;
+  metadata: EventMetadata;
+  payload: DomainEventMap[K];
 }
 
-/** קונפיגורציה של Redis */
-export interface RedisConnectionConfig {
-  host?: string;
-  port?: number;
-  password?: string;
-  db?: number;
-  /** url מלא — אם מסופק, גובר על host/port */
-  url?: string;
-  /** Redis Streams במקום BullMQ רגיל (לאירועי fan-out) */
-  useStreams?: boolean;
-}
+export type EventHandler<K extends DomainEventName> = (
+  event: DomainEvent<K>,
+) => Promise<void>;

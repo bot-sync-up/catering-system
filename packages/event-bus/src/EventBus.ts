@@ -1,221 +1,373 @@
 /**
- * EventBus — wrapper type-safe סביב BullMQ עם תמיכה ב-Redis Streams.
+ * EventBus - עטיפה type-safe סביב BullMQ ו-Redis Streams.
  *
- * שימוש בסיסי:
- *   const bus = new EventBus({ host: 'localhost', port: 6379 });
- *   await bus.publish('order.placed', { orderId: '...', ... });
- *   bus.subscribe('order.placed', async (evt) => { ... });
- *   await bus.start();
+ * תומך בשני מודי פעולה:
+ *  - "queue": BullMQ עם retries, DLQ, ו-priority (ברירת מחדל).
+ *  - "stream": Redis Streams לאירועים שצריך לשמור עליהם history.
  *
- * הערות עיצוב:
- * - כל event type מקבל queue/stream נפרד (כדי לאפשר scaling נפרד).
- * - publish יוצר event-id אוטומטית אלא אם סופק.
- * - subscribe מקבל handler async — שגיאות זורקות retry של BullMQ.
- * - shutdown נקי דרך stop().
- *
- * BullMQ והקליינטים של ioredis נטענים lazily כדי לאפשר ל-vitest
- * לרוץ ללא Redis אמיתי (mock).
+ * שימוש לדוגמה:
+ * ```ts
+ * const bus = new EventBus({ redisUrl: 'redis://localhost:6379', source: 'crm-service' });
+ * await bus.publish('lead.created', { leadId, customerName, ... });
+ * bus.subscribe('lead.created', async (event) => { ... });
+ * await bus.start();
+ * ```
  */
-import { randomUUID } from 'node:crypto';
+
+import { Queue, Worker, QueueEvents, type Job } from 'bullmq';
+import { Redis } from 'ioredis';
+import { v4 as uuidv4 } from 'uuid';
 import pino, { type Logger } from 'pino';
 import type {
-  AnyDomainEvent,
   DomainEvent,
+  DomainEventMap,
+  DomainEventName,
   EventHandler,
-  EventName,
-  EventTypeMap,
-  PublishOptions,
-  RedisConnectionConfig,
+  EventMetadata,
 } from './types.js';
 
-// טיפוסים מינימליים של BullMQ ו-ioredis כדי לא להישען על types בזמן build.
-type AnyQueue = { add: (name: string, data: unknown, opts?: Record<string, unknown>) => Promise<unknown>; close: () => Promise<void> };
-type AnyWorker = { close: () => Promise<void> };
-type AnyRedis = { xadd: (...args: unknown[]) => Promise<unknown>; quit: () => Promise<unknown>; xreadgroup?: (...args: unknown[]) => Promise<unknown> };
+export type EventBusMode = 'queue' | 'stream';
 
-export interface EventBusOptions extends RedisConnectionConfig {
-  /** קידומת לכל ה-queues (ברירת מחדל: 'catering:') */
+export interface EventBusConfig {
+  /** Redis URL (e.g., redis://localhost:6379) */
+  redisUrl: string;
+  /** שם השירות שמפעיל את ה-bus - נכנס ל-metadata.source */
+  source: string;
+  /** מצב ברירת מחדל (queue או stream) */
+  defaultMode?: EventBusMode;
+  /** קידומת ל-queues / streams */
   prefix?: string;
-  /** logger מותאם אישית */
+  /** מספר retries ב-BullMQ */
+  attempts?: number;
+  /** Backoff strategy */
+  backoffMs?: number;
+  /** Logger אופציונלי */
   logger?: Logger;
-  /** ב-test mode הכל בזיכרון (אין חיבור לרדיס) */
-  inMemory?: boolean;
+  /** מקסימום entries בשמירת stream (לפני trim) */
+  streamMaxLen?: number;
 }
 
-interface InMemoryHandlerEntry<TName extends EventName> {
-  name: TName;
-  handler: EventHandler<TName>;
+export interface PublishOptions {
+  mode?: EventBusMode;
+  correlationId?: string;
+  causationId?: string;
+  delay?: number;
+  priority?: number;
 }
 
-/**
- * EventBus — class יחיד, type-safe על פני כל ה-events.
- */
+export interface SubscribeOptions {
+  mode?: EventBusMode;
+  concurrency?: number;
+  /** consumer group name (stream mode) */
+  group?: string;
+  /** consumer name (stream mode) */
+  consumer?: string;
+}
+
+const DEFAULT_PREFIX = 'catering:events';
+const DEFAULT_ATTEMPTS = 5;
+const DEFAULT_BACKOFF_MS = 1_000;
+const DEFAULT_STREAM_MAXLEN = 10_000;
+
 export class EventBus {
-  private readonly opts: EventBusOptions;
-  private readonly logger: Logger;
-  private readonly queues = new Map<EventName, AnyQueue>();
-  private readonly workers = new Map<EventName, AnyWorker>();
-  private readonly handlers = new Map<EventName, EventHandler<EventName>[]>();
-  private redis: AnyRedis | null = null;
+  private readonly redis: Redis;
+  private readonly streamRedis: Redis;
+  private readonly config: Required<
+    Omit<EventBusConfig, 'logger' | 'defaultMode'>
+  > & {
+    logger: Logger;
+    defaultMode: EventBusMode;
+  };
+  private readonly queues = new Map<string, Queue>();
+  private readonly workers = new Map<string, Worker>();
+  private readonly queueEvents = new Map<string, QueueEvents>();
+  private readonly streamSubscribers: Array<{
+    name: string;
+    handler: (event: DomainEvent) => Promise<void>;
+    group: string;
+    consumer: string;
+    stop: () => void;
+  }> = [];
   private started = false;
-  private readonly inMemoryHandlers: InMemoryHandlerEntry<EventName>[] = [];
 
-  constructor(opts: EventBusOptions = {}) {
-    this.opts = { prefix: 'catering:', ...opts };
-    this.logger = opts.logger ?? pino({ name: 'event-bus', level: process.env.LOG_LEVEL ?? 'info' });
+  constructor(config: EventBusConfig) {
+    this.config = {
+      redisUrl: config.redisUrl,
+      source: config.source,
+      defaultMode: config.defaultMode ?? 'queue',
+      prefix: config.prefix ?? DEFAULT_PREFIX,
+      attempts: config.attempts ?? DEFAULT_ATTEMPTS,
+      backoffMs: config.backoffMs ?? DEFAULT_BACKOFF_MS,
+      streamMaxLen: config.streamMaxLen ?? DEFAULT_STREAM_MAXLEN,
+      logger: config.logger ?? pino({ name: `event-bus:${config.source}` }),
+    };
+
+    this.redis = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
+    this.streamRedis = new Redis(config.redisUrl, {
+      maxRetriesPerRequest: null,
+    });
   }
 
-  /** התחל לעבד events (יוצר workers לכל queue רשום). */
+  /**
+   * פרסום אירוע ל-bus. ב-queue mode מוסיף ל-BullMQ.
+   * ב-stream mode כותב ל-Redis Stream.
+   */
+  async publish<K extends DomainEventName>(
+    name: K,
+    payload: DomainEventMap[K],
+    options: PublishOptions = {},
+  ): Promise<string> {
+    const mode = options.mode ?? this.config.defaultMode;
+    const metadata: EventMetadata = {
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      source: this.config.source,
+      correlationId: options.correlationId,
+      causationId: options.causationId,
+      schemaVersion: 1,
+    };
+    const event: DomainEvent<K> = { name, metadata, payload };
+
+    this.config.logger.debug(
+      { eventName: name, eventId: metadata.id, mode },
+      'מפרסם אירוע',
+    );
+
+    if (mode === 'stream') {
+      return this.publishToStream(event);
+    }
+    return this.publishToQueue(event, options);
+  }
+
+  private async publishToQueue<K extends DomainEventName>(
+    event: DomainEvent<K>,
+    options: PublishOptions,
+  ): Promise<string> {
+    const queue = this.getOrCreateQueue(event.name);
+    const job = await queue.add(event.name, event, {
+      jobId: event.metadata.id,
+      delay: options.delay,
+      priority: options.priority,
+      attempts: this.config.attempts,
+      backoff: { type: 'exponential', delay: this.config.backoffMs },
+      removeOnComplete: { count: 1_000 },
+      removeOnFail: false,
+    });
+    return job.id ?? event.metadata.id;
+  }
+
+  private async publishToStream<K extends DomainEventName>(
+    event: DomainEvent<K>,
+  ): Promise<string> {
+    const streamKey = this.streamKey(event.name);
+    const id = await this.streamRedis.xadd(
+      streamKey,
+      'MAXLEN',
+      '~',
+      this.config.streamMaxLen.toString(),
+      '*',
+      'event',
+      JSON.stringify(event),
+    );
+    return id ?? event.metadata.id;
+  }
+
+  /**
+   * רישום handler לאירוע מסוים.
+   * הקריאה מחזירה מיד - ה-handlers יתחילו לעבד רק לאחר start().
+   */
+  subscribe<K extends DomainEventName>(
+    name: K,
+    handler: EventHandler<K>,
+    options: SubscribeOptions = {},
+  ): void {
+    const mode = options.mode ?? this.config.defaultMode;
+    if (mode === 'stream') {
+      this.subscribeToStream(name, handler, options);
+    } else {
+      this.subscribeToQueue(name, handler, options);
+    }
+  }
+
+  private subscribeToQueue<K extends DomainEventName>(
+    name: K,
+    handler: EventHandler<K>,
+    options: SubscribeOptions,
+  ): void {
+    if (this.workers.has(name)) {
+      throw new Error(`קיים כבר worker עבור האירוע ${name}`);
+    }
+
+    const worker = new Worker<DomainEvent<K>>(
+      this.queueName(name),
+      async (job: Job<DomainEvent<K>>) => {
+        await handler(job.data);
+      },
+      {
+        connection: this.redis.duplicate(),
+        concurrency: options.concurrency ?? 1,
+        autorun: false,
+      },
+    );
+
+    worker.on('failed', (job, err) => {
+      this.config.logger.error(
+        { eventName: name, jobId: job?.id, err: err.message },
+        'נכשל handler',
+      );
+    });
+
+    this.workers.set(name, worker);
+  }
+
+  private subscribeToStream<K extends DomainEventName>(
+    name: K,
+    handler: EventHandler<K>,
+    options: SubscribeOptions,
+  ): void {
+    const group = options.group ?? `${this.config.source}-group`;
+    const consumer = options.consumer ?? `${this.config.source}-${uuidv4()}`;
+    let stopped = false;
+
+    const loop = async () => {
+      const streamKey = this.streamKey(name);
+      try {
+        await this.streamRedis.xgroup(
+          'CREATE',
+          streamKey,
+          group,
+          '$',
+          'MKSTREAM',
+        );
+      } catch {
+        // group כבר קיים - מתעלמים
+      }
+
+      while (!stopped) {
+        try {
+          const result = (await this.streamRedis.xreadgroup(
+            'GROUP',
+            group,
+            consumer,
+            'COUNT',
+            '10',
+            'BLOCK',
+            '2000',
+            'STREAMS',
+            streamKey,
+            '>',
+          )) as Array<[string, Array<[string, string[]]>]> | null;
+
+          if (!result) continue;
+
+          for (const [, entries] of result) {
+            for (const [id, fields] of entries) {
+              const idx = fields.indexOf('event');
+              if (idx === -1) continue;
+              const event = JSON.parse(fields[idx + 1]!) as DomainEvent<K>;
+              try {
+                await handler(event);
+                await this.streamRedis.xack(streamKey, group, id);
+              } catch (err) {
+                this.config.logger.error(
+                  { eventName: name, id, err: (err as Error).message },
+                  'נכשל handler ב-stream',
+                );
+              }
+            }
+          }
+        } catch (err) {
+          if (!stopped) {
+            this.config.logger.error(
+              { err: (err as Error).message },
+              'שגיאה ב-stream loop',
+            );
+            await new Promise((r) => setTimeout(r, 1_000));
+          }
+        }
+      }
+    };
+
+    this.streamSubscribers.push({
+      name,
+      handler: handler as (event: DomainEvent) => Promise<void>,
+      group,
+      consumer,
+      stop: () => {
+        stopped = true;
+      },
+    });
+
+    if (this.started) void loop();
+    else {
+      // נשמור reference כדי שנפעיל ב-start
+      this.pendingStreamLoops.push(loop);
+    }
+  }
+
+  private pendingStreamLoops: Array<() => Promise<void>> = [];
+
+  /**
+   * התחלת עיבוד workers/streams. חובה לקרוא לאחר subscribe.
+   */
   async start(): Promise<void> {
     if (this.started) return;
     this.started = true;
-
-    if (this.opts.inMemory) {
-      this.logger.info('event-bus started in-memory');
-      return;
+    for (const worker of this.workers.values()) {
+      worker.run();
     }
-
-    // טעינה דינמית כדי לא לכפות BullMQ ב-build/test
-    const bullmq = await this.loadBullMQ();
-    const connection = await this.createConnection();
-
-    for (const [eventName, handlers] of this.handlers.entries()) {
-      const queueName = this.queueName(eventName);
-      const worker = new bullmq.Worker(
-        queueName,
-        async (job: { id?: string; data: AnyDomainEvent; attemptsMade?: number }) => {
-          const evt = job.data;
-          this.logger.debug({ eventType: evt.type, eventId: evt.id, jobId: job.id }, 'processing event');
-          for (const h of handlers) {
-            await (h as EventHandler<typeof evt.type>)(evt as never);
-          }
-        },
-        { connection, prefix: this.opts.prefix }
-      );
-      worker.on('failed', (job: unknown, err: Error) => {
-        this.logger.error({ err, jobId: (job as { id?: string } | undefined)?.id }, 'job failed');
-      });
-      this.workers.set(eventName, worker as AnyWorker);
+    for (const loop of this.pendingStreamLoops) {
+      void loop();
     }
-
-    this.logger.info({ workers: this.workers.size }, 'event-bus started');
+    this.pendingStreamLoops = [];
+    this.config.logger.info(
+      { workers: this.workers.size, streams: this.streamSubscribers.length },
+      'EventBus התחיל',
+    );
   }
 
-  /** עצור worker/queue/redis בצורה מסודרת. */
+  /**
+   * עצירה מסודרת של כל ה-workers וה-streams.
+   */
   async stop(): Promise<void> {
-    for (const w of this.workers.values()) await w.close();
-    for (const q of this.queues.values()) await q.close();
-    if (this.redis) await this.redis.quit();
-    this.workers.clear();
-    this.queues.clear();
-    this.redis = null;
     this.started = false;
-    this.logger.info('event-bus stopped');
-  }
-
-  /**
-   * publish event — type safe.
-   * אם useStreams=true, פרסום ל-Redis Stream במקום BullMQ Queue.
-   */
-  async publish<TName extends EventName>(
-    name: TName,
-    payload: EventTypeMap[TName],
-    options: PublishOptions = {}
-  ): Promise<DomainEvent<TName, EventTypeMap[TName]>> {
-    const event: DomainEvent<TName, EventTypeMap[TName]> = {
-      id: options.id ?? randomUUID(),
-      type: name,
-      occurredAt: new Date().toISOString(),
-      payload,
-    };
-
-    this.logger.debug({ eventType: name, eventId: event.id }, 'publishing event');
-
-    if (this.opts.inMemory) {
-      // dispatch סינכרוני ב-test mode
-      const matching = this.inMemoryHandlers.filter((h) => h.name === name);
-      for (const { handler } of matching) {
-        await (handler as EventHandler<TName>)(event);
-      }
-      return event;
+    for (const sub of this.streamSubscribers) {
+      sub.stop();
     }
+    await Promise.all(
+      Array.from(this.workers.values()).map((w) => w.close()),
+    );
+    await Promise.all(
+      Array.from(this.queueEvents.values()).map((qe) => qe.close()),
+    );
+    await Promise.all(Array.from(this.queues.values()).map((q) => q.close()));
+    await this.redis.quit();
+    await this.streamRedis.quit();
+    this.config.logger.info('EventBus נעצר');
+  }
 
-    if (this.opts.useStreams) {
-      const redis = await this.getRedis();
-      const streamKey = `${this.opts.prefix}stream:${name}`;
-      await redis.xadd(streamKey, '*', 'event', JSON.stringify(event));
-      return event;
+  /** קבלת queue (מיועד בעיקר לבדיקות) */
+  getQueue<K extends DomainEventName>(name: K): Queue {
+    return this.getOrCreateQueue(name);
+  }
+
+  private getOrCreateQueue(name: string): Queue {
+    let queue = this.queues.get(name);
+    if (!queue) {
+      queue = new Queue(this.queueName(name), {
+        connection: this.redis.duplicate(),
+        prefix: this.config.prefix,
+      });
+      this.queues.set(name, queue);
     }
-
-    const queue = await this.getQueue(name);
-    await queue.add(name, event, {
-      jobId: event.id,
-      delay: options.delayMs,
-      priority: options.priority,
-      attempts: options.attempts ?? 3,
-      backoff: { type: 'exponential', delay: 1000 },
-      removeOnComplete: 1000,
-      removeOnFail: 5000,
-    });
-    return event;
+    return queue;
   }
 
-  /**
-   * subscribe — רישום handler לאירוע.
-   * כל ה-subscribe חייב לקרות לפני start().
-   */
-  subscribe<TName extends EventName>(name: TName, handler: EventHandler<TName>): void {
-    if (this.started && !this.opts.inMemory) {
-      throw new Error('Cannot subscribe after EventBus.start() was called');
-    }
-    const list = (this.handlers.get(name) ?? []) as EventHandler<EventName>[];
-    list.push(handler as EventHandler<EventName>);
-    this.handlers.set(name, list);
-    this.inMemoryHandlers.push({ name, handler: handler as EventHandler<EventName> });
+  private queueName(name: string): string {
+    return `${name}`;
   }
 
-  // ---------------------------------------------------------------------------
-  //                              Internals
-  // ---------------------------------------------------------------------------
-
-  private queueName(name: EventName): string {
-    return name; // BullMQ נותן prefix לבד דרך opts.prefix
-  }
-
-  private async getQueue(name: EventName): Promise<AnyQueue> {
-    let q = this.queues.get(name);
-    if (q) return q;
-    const bullmq = await this.loadBullMQ();
-    const connection = await this.createConnection();
-    q = new bullmq.Queue(this.queueName(name), { connection, prefix: this.opts.prefix }) as AnyQueue;
-    this.queues.set(name, q);
-    return q;
-  }
-
-  private async getRedis(): Promise<AnyRedis> {
-    if (this.redis) return this.redis;
-    const { default: IORedis } = await import('ioredis');
-    const cfg = this.opts;
-    this.redis = (cfg.url ? new IORedis(cfg.url) : new IORedis({
-      host: cfg.host ?? '127.0.0.1',
-      port: cfg.port ?? 6379,
-      password: cfg.password,
-      db: cfg.db,
-      maxRetriesPerRequest: null,
-    })) as unknown as AnyRedis;
-    return this.redis;
-  }
-
-  private async createConnection(): Promise<AnyRedis> {
-    return this.getRedis();
-  }
-
-  private async loadBullMQ(): Promise<{ Queue: new (n: string, o: unknown) => AnyQueue; Worker: new (n: string, p: unknown, o: unknown) => AnyWorker }> {
-    // טעינה דינמית — bullmq הוא optional ב-test/in-memory
-    const mod = (await import('bullmq')) as unknown as {
-      Queue: new (n: string, o: unknown) => AnyQueue;
-      Worker: new (n: string, p: unknown, o: unknown) => AnyWorker;
-    };
-    return mod;
+  private streamKey(name: string): string {
+    return `${this.config.prefix}:stream:${name}`;
   }
 }

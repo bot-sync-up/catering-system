@@ -1,83 +1,170 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+/**
+ * EventBus.test.ts - בדיקות unit ל-EventBus.
+ *
+ * הבדיקות מבוצעות עם מוקים ל-BullMQ ול-ioredis,
+ * כך שאין צורך ב-Redis אמיתי בזמן הריצה.
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// ── מוקים ל-BullMQ ול-ioredis ─────────────────────────────────
+const addMock = vi.fn(async (_name: string, data: { metadata: { id: string } }) => ({
+  id: data.metadata.id,
+}));
+const closeQueueMock = vi.fn(async () => {});
+const runMock = vi.fn();
+const closeWorkerMock = vi.fn(async () => {});
+const onMock = vi.fn();
+const xaddMock = vi.fn(async () => '1-0');
+const xgroupMock = vi.fn(async () => 'OK');
+const xreadgroupMock = vi.fn(async () => null);
+const xackMock = vi.fn(async () => 1);
+const quitMock = vi.fn(async () => 'OK');
+
+vi.mock('bullmq', () => {
+  return {
+    Queue: vi.fn().mockImplementation(() => ({
+      add: addMock,
+      close: closeQueueMock,
+    })),
+    Worker: vi.fn().mockImplementation(() => ({
+      run: runMock,
+      close: closeWorkerMock,
+      on: onMock,
+    })),
+    QueueEvents: vi.fn().mockImplementation(() => ({
+      close: vi.fn(async () => {}),
+    })),
+  };
+});
+
+vi.mock('ioredis', () => {
+  class Redis {
+    duplicate() {
+      return new Redis();
+    }
+    xadd = xaddMock;
+    xgroup = xgroupMock;
+    xreadgroup = xreadgroupMock;
+    xack = xackMock;
+    quit = quitMock;
+  }
+  return { Redis, default: Redis };
+});
+
 import { EventBus } from '../src/EventBus.js';
-import type { OrderPlacedPayload } from '../src/types.js';
+import type { LeadCreatedPayload } from '../src/types.js';
 
-describe('EventBus (in-memory)', () => {
-  let bus: EventBus;
-
+describe('EventBus', () => {
   beforeEach(() => {
-    bus = new EventBus({ inMemory: true });
+    addMock.mockClear();
+    xaddMock.mockClear();
+    runMock.mockClear();
+    closeQueueMock.mockClear();
+    closeWorkerMock.mockClear();
+    quitMock.mockClear();
   });
 
-  it('publishes and dispatches events synchronously in-memory', async () => {
-    const received: OrderPlacedPayload[] = [];
-    bus.subscribe('order.placed', async (evt) => {
-      received.push(evt.payload);
-    });
-    await bus.start();
-
-    await bus.publish('order.placed', {
-      orderId: 'o-1',
-      customerId: 'c-1',
-      totalAmount: 100,
-      currency: 'ILS',
-      items: [{ sku: 'A', quantity: 1, unitPrice: 100 }],
+  it('מפרסם אירוע למצב queue עם metadata תקין', async () => {
+    const bus = new EventBus({
+      redisUrl: 'redis://localhost:6379',
+      source: 'test-service',
     });
 
-    expect(received).toHaveLength(1);
-    expect(received[0]?.orderId).toBe('o-1');
-  });
+    const payload: LeadCreatedPayload = {
+      leadId: 'lead-1',
+      customerName: 'דני כהן',
+      phone: '050-1234567',
+      source: 'website',
+    };
 
-  it('generates a unique event id when not supplied', async () => {
-    const ids: string[] = [];
-    bus.subscribe('lead.created', async (evt) => {
-      ids.push(evt.id);
-    });
-    await bus.start();
+    const id = await bus.publish('lead.created', payload);
+    expect(id).toBeDefined();
+    expect(addMock).toHaveBeenCalledTimes(1);
 
-    await bus.publish('lead.created', { leadId: 'l1', customerName: 'X', phone: '050' });
-    await bus.publish('lead.created', { leadId: 'l2', customerName: 'Y', phone: '050' });
+    const [eventName, eventData] = addMock.mock.calls[0]!;
+    expect(eventName).toBe('lead.created');
+    expect(eventData.metadata.source).toBe('test-service');
+    expect(eventData.metadata.id).toBeDefined();
+    expect(eventData.metadata.schemaVersion).toBe(1);
 
-    expect(ids).toHaveLength(2);
-    expect(ids[0]).not.toBe(ids[1]);
-    expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
-  });
-
-  it('routes events to the correct subscribers by type', async () => {
-    const leadHits: string[] = [];
-    const orderHits: string[] = [];
-    bus.subscribe('lead.created', async (e) => { leadHits.push(e.payload.leadId); });
-    bus.subscribe('order.placed', async (e) => { orderHits.push(e.payload.orderId); });
-    await bus.start();
-
-    await bus.publish('lead.created', { leadId: 'L1', customerName: 'a', phone: 'p' });
-    await bus.publish('order.placed', {
-      orderId: 'O1', customerId: 'C1', totalAmount: 10, currency: 'ILS',
-      items: [{ sku: 'S', quantity: 1, unitPrice: 10 }],
-    });
-
-    expect(leadHits).toEqual(['L1']);
-    expect(orderHits).toEqual(['O1']);
-  });
-
-  it('supports multiple handlers per event', async () => {
-    const a: string[] = [];
-    const b: string[] = [];
-    bus.subscribe('payment.received', (e) => { a.push(e.payload.paymentId); });
-    bus.subscribe('payment.received', (e) => { b.push(e.payload.paymentId); });
-    await bus.start();
-
-    await bus.publish('payment.received', {
-      paymentId: 'p1', orderId: 'o1', amount: 100, currency: 'ILS', method: 'credit_card',
-    });
-
-    expect(a).toEqual(['p1']);
-    expect(b).toEqual(['p1']);
-  });
-
-  it('stops cleanly without errors', async () => {
-    await bus.start();
     await bus.stop();
-    expect(true).toBe(true);
+  });
+
+  it('מפרסם אירוע למצב stream', async () => {
+    const bus = new EventBus({
+      redisUrl: 'redis://localhost:6379',
+      source: 'test-service',
+      defaultMode: 'stream',
+    });
+
+    await bus.publish('inventory.low', {
+      sku: 'SKU-1',
+      productName: 'עגבניות',
+      currentQuantity: 5,
+      thresholdQuantity: 20,
+      reorderQuantity: 50,
+      warehouseId: 'WH-1',
+    });
+
+    expect(xaddMock).toHaveBeenCalledTimes(1);
+    await bus.stop();
+  });
+
+  it('subscribe יוצר worker חדש פר אירוע', async () => {
+    const bus = new EventBus({
+      redisUrl: 'redis://localhost:6379',
+      source: 'test-service',
+    });
+
+    const handler = vi.fn(async () => {});
+    bus.subscribe('order.placed', handler);
+
+    await bus.start();
+    expect(runMock).toHaveBeenCalledTimes(1);
+
+    await bus.stop();
+    expect(closeWorkerMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('subscribe לאותו event פעמיים זורק שגיאה', async () => {
+    const bus = new EventBus({
+      redisUrl: 'redis://localhost:6379',
+      source: 'test-service',
+    });
+
+    bus.subscribe('order.placed', async () => {});
+    expect(() => bus.subscribe('order.placed', async () => {})).toThrow(
+      /order.placed/,
+    );
+
+    await bus.stop();
+  });
+
+  it('correlationId ו-causationId נשמרים ב-metadata', async () => {
+    const bus = new EventBus({
+      redisUrl: 'redis://localhost:6379',
+      source: 'crm',
+    });
+
+    await bus.publish(
+      'quote.sent',
+      {
+        quoteId: 'q-1',
+        leadId: 'l-1',
+        customerId: 'c-1',
+        totalAmount: 5000,
+        currency: 'ILS',
+        validUntil: '2026-12-31',
+        items: [],
+      },
+      { correlationId: 'corr-1', causationId: 'cause-1' },
+    );
+
+    const [, eventData] = addMock.mock.calls[0]!;
+    expect(eventData.metadata.correlationId).toBe('corr-1');
+    expect(eventData.metadata.causationId).toBe('cause-1');
+
+    await bus.stop();
   });
 });

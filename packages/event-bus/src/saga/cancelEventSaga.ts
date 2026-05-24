@@ -1,167 +1,185 @@
 /**
- * cancelEventSaga.ts — saga של ביטול אירוע קייטרינג.
+ * cancelEventSaga - saga לביטול אירוע קייטרינג (8 שלבים).
  *
- * 8 שלבים, כל אחד עם compensation:
- *  1. validateCancellation     — בדיקה שאפשר לבטל
- *  2. cancelOrder              — סימון הזמנה כמבוטלת
- *  3. cancelKitchenPrep        — ביטול הכנה במטבח
- *  4. cancelDelivery           — ביטול שיבוץ נהג/רכב
- *  5. releaseInventory         — שחרור מלאי שהוקצה
- *  6. issueRefund              — החזר כספי (אם רלוונטי)
- *  7. issueCreditNote          — חשבונית זיכוי
- *  8. notifyCustomer           — הודעה ללקוח
+ * סדר הביצוע (forward):
+ *  1. וידוא הרשאות לביטול
+ *  2. ביטול ההזמנה במערכת ה-orders
+ *  3. ביטול משימות מטבח (kitchen)
+ *  4. ביטול שיבוץ אירוע (events scheduler)
+ *  5. ביטול משלוח (logistics)
+ *  6. החזרת inventory למחסן
+ *  7. שחרור עובדים מהשיבוץ (HR)
+ *  8. הוצאת זיכוי / החזר תשלום (finance)
  *
- * כל compensate מבצע פעולה הפוכה: re-activate order, re-allocate stock, וכו'.
- *
- * את הסאגה בונים דרך `buildCancelEventSaga(deps)` כך שכל ה-side-effects
- * (קריאות לשירותים אחרים) מועברים pure-functional ולא hard-coded.
+ * Compensation (backward) - בדיוק הפוך, כל שלב מחזיר את עצמו אחורה.
  */
-import type { SagaDefinition, SagaStep } from './SagaCoordinator.js';
 
-export interface CancelEventContext {
-  orderId: string;
+import { SagaCoordinator, type SagaStep } from './SagaCoordinator.js';
+
+export interface CancelEventContext extends Record<string, unknown> {
   eventId: string;
-  reason: string;
-  refundAmount?: number;
+  orderId: string;
   customerId: string;
-  /** מיופים ע"י השלבים */
+  reason: string;
+  cancelledBy: string;
+  // נשמרים תוך כדי ריצה כדי לאפשר compensate
   cancellationToken?: string;
-  kitchenTaskId?: string;
-  deliveryId?: string;
-  inventoryReservationId?: string;
-  refundTxId?: string;
-  creditNoteId?: string;
-  notificationId?: string;
-  [key: string]: unknown;
+  reservedKitchenTaskIds?: string[];
+  reservedDeliveryId?: string;
+  restoredInventoryItems?: Array<{ sku: string; quantity: number }>;
+  releasedEmployeeIds?: string[];
+  refundId?: string;
 }
 
-/**
- * dependencies — services שצריך לעצור את העבודה איתם.
- * כולם stubs לצורך הבדיקה — ההזרקה האמיתית מגיעה מ-bootstrap הפרויקט.
- */
-export interface CancelEventDeps {
-  orderService: {
-    validateCancellation(orderId: string): Promise<string>;
-    cancel(orderId: string, token: string): Promise<void>;
-    reactivate(orderId: string, token: string): Promise<void>;
+export interface CancelEventServices {
+  auth: {
+    verifyCancelPermission: (userId: string, eventId: string) => Promise<string>;
+    revokeCancellation: (token: string) => Promise<void>;
   };
-  kitchenService: {
-    cancelPrep(orderId: string): Promise<string>;
-    restorePrep(taskId: string): Promise<void>;
+  orders: {
+    cancel: (orderId: string, reason: string) => Promise<void>;
+    restore: (orderId: string) => Promise<void>;
   };
-  logisticsService: {
-    cancelDelivery(orderId: string): Promise<string>;
-    restoreDelivery(deliveryId: string): Promise<void>;
+  kitchen: {
+    cancelTasks: (eventId: string) => Promise<string[]>;
+    restoreTasks: (taskIds: string[]) => Promise<void>;
   };
-  inventoryService: {
-    release(orderId: string): Promise<string>;
-    reReserve(reservationId: string): Promise<void>;
+  events: {
+    unschedule: (eventId: string) => Promise<void>;
+    reschedule: (eventId: string) => Promise<void>;
   };
-  paymentService: {
-    refund(orderId: string, amount: number): Promise<string>;
-    voidRefund(refundTxId: string): Promise<void>;
+  logistics: {
+    cancelDelivery: (orderId: string) => Promise<string>;
+    restoreDelivery: (deliveryId: string) => Promise<void>;
   };
-  financeService: {
-    issueCreditNote(orderId: string, amount: number): Promise<string>;
-    voidCreditNote(creditNoteId: string): Promise<void>;
+  inventory: {
+    returnItems: (
+      orderId: string,
+    ) => Promise<Array<{ sku: string; quantity: number }>>;
+    reReserveItems: (items: Array<{ sku: string; quantity: number }>) => Promise<void>;
   };
-  notificationService: {
-    notifyCancellation(customerId: string, orderId: string): Promise<string>;
-    revertNotification(notificationId: string): Promise<void>;
+  hr: {
+    releaseStaff: (eventId: string) => Promise<string[]>;
+    reAssignStaff: (eventId: string, employeeIds: string[]) => Promise<void>;
+  };
+  finance: {
+    issueRefund: (orderId: string, reason: string) => Promise<string>;
+    revokeRefund: (refundId: string) => Promise<void>;
   };
 }
 
 export function buildCancelEventSaga(
-  ctx: CancelEventContext,
-  deps: CancelEventDeps
-): SagaDefinition<CancelEventContext> {
+  services: CancelEventServices,
+): SagaCoordinator<CancelEventContext> {
+  const saga = new SagaCoordinator<CancelEventContext>('cancel-event');
+
   const steps: SagaStep<CancelEventContext>[] = [
     {
-      name: 'validateCancellation',
-      execute: async (c) => {
-        c.cancellationToken = await deps.orderService.validateCancellation(c.orderId);
+      name: 'verify-permission',
+      retries: 1,
+      execute: async (ctx) => {
+        ctx.cancellationToken = await services.auth.verifyCancelPermission(
+          ctx.cancelledBy,
+          ctx.eventId,
+        );
       },
-      compensate: async () => {
-        // אין compensation — validate בלבד
-      },
-    },
-    {
-      name: 'cancelOrder',
-      execute: async (c) => {
-        if (!c.cancellationToken) throw new Error('Missing cancellation token');
-        await deps.orderService.cancel(c.orderId, c.cancellationToken);
-      },
-      compensate: async (c) => {
-        if (c.cancellationToken) {
-          await deps.orderService.reactivate(c.orderId, c.cancellationToken);
+      compensate: async (ctx) => {
+        if (ctx.cancellationToken) {
+          await services.auth.revokeCancellation(ctx.cancellationToken);
         }
       },
     },
     {
-      name: 'cancelKitchenPrep',
-      execute: async (c) => {
-        c.kitchenTaskId = await deps.kitchenService.cancelPrep(c.orderId);
+      name: 'cancel-order',
+      retries: 2,
+      execute: async (ctx) => {
+        await services.orders.cancel(ctx.orderId, ctx.reason);
       },
-      compensate: async (c) => {
-        if (c.kitchenTaskId) await deps.kitchenService.restorePrep(c.kitchenTaskId);
-      },
-    },
-    {
-      name: 'cancelDelivery',
-      execute: async (c) => {
-        c.deliveryId = await deps.logisticsService.cancelDelivery(c.orderId);
-      },
-      compensate: async (c) => {
-        if (c.deliveryId) await deps.logisticsService.restoreDelivery(c.deliveryId);
+      compensate: async (ctx) => {
+        await services.orders.restore(ctx.orderId);
       },
     },
     {
-      name: 'releaseInventory',
-      execute: async (c) => {
-        c.inventoryReservationId = await deps.inventoryService.release(c.orderId);
+      name: 'cancel-kitchen-tasks',
+      retries: 2,
+      execute: async (ctx) => {
+        ctx.reservedKitchenTaskIds = await services.kitchen.cancelTasks(
+          ctx.eventId,
+        );
       },
-      compensate: async (c) => {
-        if (c.inventoryReservationId) {
-          await deps.inventoryService.reReserve(c.inventoryReservationId);
+      compensate: async (ctx) => {
+        if (ctx.reservedKitchenTaskIds?.length) {
+          await services.kitchen.restoreTasks(ctx.reservedKitchenTaskIds);
         }
       },
     },
     {
-      name: 'issueRefund',
-      execute: async (c) => {
-        if (c.refundAmount && c.refundAmount > 0) {
-          c.refundTxId = await deps.paymentService.refund(c.orderId, c.refundAmount);
-        }
+      name: 'unschedule-event',
+      retries: 2,
+      execute: async (ctx) => {
+        await services.events.unschedule(ctx.eventId);
       },
-      compensate: async (c) => {
-        if (c.refundTxId) await deps.paymentService.voidRefund(c.refundTxId);
-      },
-    },
-    {
-      name: 'issueCreditNote',
-      execute: async (c) => {
-        if (c.refundAmount && c.refundAmount > 0) {
-          c.creditNoteId = await deps.financeService.issueCreditNote(c.orderId, c.refundAmount);
-        }
-      },
-      compensate: async (c) => {
-        if (c.creditNoteId) await deps.financeService.voidCreditNote(c.creditNoteId);
+      compensate: async (ctx) => {
+        await services.events.reschedule(ctx.eventId);
       },
     },
     {
-      name: 'notifyCustomer',
-      execute: async (c) => {
-        c.notificationId = await deps.notificationService.notifyCancellation(c.customerId, c.orderId);
+      name: 'cancel-delivery',
+      retries: 2,
+      execute: async (ctx) => {
+        ctx.reservedDeliveryId = await services.logistics.cancelDelivery(
+          ctx.orderId,
+        );
       },
-      compensate: async (c) => {
-        if (c.notificationId) await deps.notificationService.revertNotification(c.notificationId);
+      compensate: async (ctx) => {
+        if (ctx.reservedDeliveryId) {
+          await services.logistics.restoreDelivery(ctx.reservedDeliveryId);
+        }
+      },
+    },
+    {
+      name: 'return-inventory',
+      retries: 2,
+      execute: async (ctx) => {
+        ctx.restoredInventoryItems = await services.inventory.returnItems(
+          ctx.orderId,
+        );
+      },
+      compensate: async (ctx) => {
+        if (ctx.restoredInventoryItems?.length) {
+          await services.inventory.reReserveItems(ctx.restoredInventoryItems);
+        }
+      },
+    },
+    {
+      name: 'release-staff',
+      retries: 2,
+      execute: async (ctx) => {
+        ctx.releasedEmployeeIds = await services.hr.releaseStaff(ctx.eventId);
+      },
+      compensate: async (ctx) => {
+        if (ctx.releasedEmployeeIds?.length) {
+          await services.hr.reAssignStaff(ctx.eventId, ctx.releasedEmployeeIds);
+        }
+      },
+    },
+    {
+      name: 'issue-refund',
+      retries: 3,
+      execute: async (ctx) => {
+        ctx.refundId = await services.finance.issueRefund(
+          ctx.orderId,
+          ctx.reason,
+        );
+      },
+      compensate: async (ctx) => {
+        if (ctx.refundId) {
+          await services.finance.revokeRefund(ctx.refundId);
+        }
       },
     },
   ];
 
-  return {
-    name: 'cancel-event',
-    steps,
-    context: ctx,
-  };
+  saga.addSteps(steps);
+  return saga;
 }

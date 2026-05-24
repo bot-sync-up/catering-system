@@ -1,36 +1,23 @@
 /**
- * publish.ts — helper functions לפרסום events.
+ * publish.ts - helper פונקציונאלי לפרסום אירוע יחיד.
  *
- * השימוש הקנוני הוא דרך `EventBus.publish`, אבל helpers אלה
- * נוחים ל-call sites בלי ה-instance.
+ * שימושי כאשר רוצים לפרסם בלי לשמור instance של EventBus
+ * (לדוגמה בתסריטי CLI או scripts חד-פעמיים).
  */
-import type { EventBus } from './EventBus.js';
-import type { DomainEvent, EventName, EventTypeMap, PublishOptions } from './types.js';
 
-/**
- * פרסם event דרך bus קיים.
- * שקול שימוש לאירועים תכופים שלא רוצים לחשוף את האובייקט כולו.
- */
-export async function publishEvent<TName extends EventName>(
-  bus: EventBus,
-  name: TName,
-  payload: EventTypeMap[TName],
-  options?: PublishOptions
-): Promise<DomainEvent<TName, EventTypeMap[TName]>> {
-  return bus.publish(name, payload, options);
-}
+import { EventBus, type EventBusConfig, type PublishOptions } from './EventBus.js';
+import type { DomainEventMap, DomainEventName } from './types.js';
 
-/**
- * פרסום מספר events כקבוצה (publish-many).
- * אם אחד נכשל, מטלת ה-DLQ של BullMQ תטפל בו — לא כושל את כל הקבוצה.
- */
-export async function publishMany(
-  bus: EventBus,
-  events: Array<{
-    [K in EventName]: { name: K; payload: EventTypeMap[K]; options?: PublishOptions };
-  }[EventName]>
-): Promise<void> {
-  for (const e of events) {
-    await bus.publish(e.name, e.payload as never, e.options);
+export async function publish<K extends DomainEventName>(
+  config: EventBusConfig,
+  name: K,
+  payload: DomainEventMap[K],
+  options?: PublishOptions,
+): Promise<string> {
+  const bus = new EventBus(config);
+  try {
+    return await bus.publish(name, payload, options);
+  } finally {
+    await bus.stop();
   }
 }

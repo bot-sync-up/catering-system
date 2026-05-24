@@ -1,31 +1,36 @@
 /**
- * subscribe.ts — helpers להירשם ל-events בצורה נוחה.
+ * subscribe.ts - helper פונקציונאלי לרישום מספר handlers בבת אחת.
+ *
+ * שימוש לדוגמה:
+ * ```ts
+ * const bus = await subscribeAll(config, {
+ *   'lead.created': handleLeadCreated,
+ *   'order.placed': handleOrderPlaced,
+ * });
+ * ```
  */
-import type { EventBus } from './EventBus.js';
-import type { EventHandler, EventName } from './types.js';
 
-/**
- * הירשם ל-event בודד.
- * עוטף את `bus.subscribe` כדי לאפשר חתימה functional.
- */
-export function subscribeEvent<TName extends EventName>(
-  bus: EventBus,
-  name: TName,
-  handler: EventHandler<TName>
-): void {
-  bus.subscribe(name, handler);
-}
+import { EventBus, type EventBusConfig, type SubscribeOptions } from './EventBus.js';
+import type { DomainEventMap, DomainEventName, EventHandler } from './types.js';
 
-/**
- * הירשם למספר events בפעולה אחת.
- */
-export function subscribeMany(
-  bus: EventBus,
-  subscriptions: Array<{
-    [K in EventName]: { name: K; handler: EventHandler<K> };
-  }[EventName]>
-): void {
-  for (const sub of subscriptions) {
-    bus.subscribe(sub.name, sub.handler as never);
+export type HandlerMap = {
+  [K in DomainEventName]?: EventHandler<K>;
+};
+
+export async function subscribeAll(
+  config: EventBusConfig,
+  handlers: HandlerMap,
+  options?: SubscribeOptions,
+): Promise<EventBus> {
+  const bus = new EventBus(config);
+  for (const [name, handler] of Object.entries(handlers)) {
+    if (!handler) continue;
+    bus.subscribe(
+      name as DomainEventName,
+      handler as EventHandler<DomainEventName>,
+      options,
+    );
   }
+  await bus.start();
+  return bus;
 }

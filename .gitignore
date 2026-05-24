@@ -1,11 +1,10 @@
 node_modules/
 dist/
 build/
-coverage/
 *.log
-.DS_Store
 .env
 .env.local
-.pnpm-store/
+.DS_Store
+coverage/
+.vitest-cache/
 .turbo/
-*.tsbuildinfo

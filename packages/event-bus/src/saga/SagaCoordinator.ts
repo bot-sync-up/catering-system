@@ -1,129 +1,160 @@
 /**
- * SagaCoordinator — implements the Saga pattern (orchestration style).
+ * SagaCoordinator - מנגנון orchestration ל-distributed transactions.
  *
- * Saga = רצף שלבים שכל אחד מהם יכול להיכשל.
- * אם שלב נכשל, מריצים compensation לכל השלבים שהצליחו עד עכשיו
- * בסדר הפוך — כדי להחזיר את המערכת ל-consistent state.
+ * כל saga מורכב מ-steps. כל step מבצע פעולה ויכול לחזור עליה (compensate)
+ * במקרה של כשל בשלב מאוחר יותר.
  *
- * שימוש:
- *   const saga = new SagaCoordinator({ logger });
- *   await saga.run({
- *     name: 'cancel-event',
- *     steps: [
- *       { name: 'refund', execute: ..., compensate: ... },
- *       ...
- *     ],
- *     context: { eventId: '...' }
- *   });
+ * הפלטפורמה משתמשת ב-saga פטרן כדי להבטיח עקביות בין שירותים
+ * (orders, finance, kitchen, logistics) ללא transactions גלובליות.
  */
+
 import pino, { type Logger } from 'pino';
+import { v4 as uuidv4 } from 'uuid';
 
-export interface SagaContext {
-  /** ה-context משתנה בין שלבים — כל שלב יכול להוסיף נתונים */
-  [key: string]: unknown;
-}
-
-export interface SagaStep<TContext extends SagaContext = SagaContext> {
-  /** שם השלב — לדיווח/לוג */
+export interface SagaStep<TContext> {
+  /** שם השלב לצורכי לוגינג */
   name: string;
-  /** פעולת הביצוע — חייבת להיות idempotent */
-  execute: (ctx: TContext) => Promise<void> | void;
-  /** פעולת תיקון — מתבצעת רק אם השלב הצליח ושלב מאוחר יותר נכשל */
-  compensate: (ctx: TContext) => Promise<void> | void;
-  /** האם להמשיך גם אם compensate נכשל (ברירת מחדל: true — log+continue) */
-  continueOnCompensateError?: boolean;
+  /** הפעולה הראשית של השלב */
+  execute: (ctx: TContext) => Promise<void>;
+  /** פעולת פיצוי - מתבצעת במקרה של rollback */
+  compensate?: (ctx: TContext) => Promise<void>;
+  /** מספר ניסיונות לפני שמכריזים כשל */
+  retries?: number;
 }
 
-export interface SagaDefinition<TContext extends SagaContext = SagaContext> {
-  name: string;
-  steps: SagaStep<TContext>[];
+export interface SagaResult<TContext> {
+  sagaId: string;
+  status: 'completed' | 'compensated' | 'failed';
   context: TContext;
-}
-
-export interface SagaResult<TContext extends SagaContext = SagaContext> {
-  success: boolean;
-  context: TContext;
-  failedStep?: string;
-  error?: unknown;
-  compensated: string[];
-  compensationErrors: Array<{ step: string; error: unknown }>;
+  completedSteps: string[];
+  compensatedSteps: string[];
+  error?: string;
 }
 
 export interface SagaCoordinatorOptions {
   logger?: Logger;
+  retryDelayMs?: number;
 }
 
-export class SagaCoordinator {
+export class SagaCoordinator<TContext extends Record<string, unknown>> {
+  private readonly steps: SagaStep<TContext>[] = [];
   private readonly logger: Logger;
+  private readonly retryDelayMs: number;
 
-  constructor(opts: SagaCoordinatorOptions = {}) {
-    this.logger = opts.logger ?? pino({ name: 'saga-coordinator' });
+  constructor(
+    private readonly name: string,
+    options: SagaCoordinatorOptions = {},
+  ) {
+    this.logger = options.logger ?? pino({ name: `saga:${name}` });
+    this.retryDelayMs = options.retryDelayMs ?? 500;
+  }
+
+  /** הוספת step ל-saga */
+  addStep(step: SagaStep<TContext>): this {
+    this.steps.push(step);
+    return this;
+  }
+
+  /** הוספת מספר steps בבת אחת */
+  addSteps(steps: SagaStep<TContext>[]): this {
+    this.steps.push(...steps);
+    return this;
   }
 
   /**
-   * הרץ saga. מחזיר תוצאה (success/failure + compensations שבוצעו).
+   * הרצת ה-saga. במקרה של כשל באחד השלבים, מתבצע compensate
+   * בסדר הפוך לכל ה-steps שכבר רצו בהצלחה.
    */
-  async run<TContext extends SagaContext>(
-    def: SagaDefinition<TContext>
-  ): Promise<SagaResult<TContext>> {
-    const executed: SagaStep<TContext>[] = [];
-    const log = this.logger.child({ saga: def.name });
-    log.info({ steps: def.steps.length }, 'saga starting');
+  async run(initialContext: TContext): Promise<SagaResult<TContext>> {
+    const sagaId = uuidv4();
+    const context = { ...initialContext } as TContext;
+    const completedSteps: string[] = [];
+    const compensatedSteps: string[] = [];
 
-    for (const step of def.steps) {
-      try {
-        log.debug({ step: step.name }, 'executing step');
-        await step.execute(def.context);
-        executed.push(step);
-        log.info({ step: step.name }, 'step ok');
-      } catch (err) {
-        log.error({ err, step: step.name }, 'step failed — running compensations');
-        const compensation = await this.compensate(executed, def.context, log);
+    this.logger.info({ sagaId, name: this.name }, 'התחלת saga');
+
+    for (const step of this.steps) {
+      const ok = await this.runStep(step, context, sagaId);
+      if (!ok.success) {
+        this.logger.error(
+          { sagaId, step: step.name, err: ok.error },
+          'כשל ב-step - מתחיל compensate',
+        );
+        const compensated = await this.compensate(completedSteps, context, sagaId);
+        compensatedSteps.push(...compensated);
         return {
-          success: false,
-          context: def.context,
-          failedStep: step.name,
-          error: err,
-          compensated: compensation.compensated,
-          compensationErrors: compensation.errors,
+          sagaId,
+          status: 'compensated',
+          context,
+          completedSteps,
+          compensatedSteps,
+          error: ok.error,
         };
       }
+      completedSteps.push(step.name);
     }
 
-    log.info('saga completed successfully');
+    this.logger.info({ sagaId, name: this.name }, 'saga הושלם בהצלחה');
     return {
-      success: true,
-      context: def.context,
-      compensated: [],
-      compensationErrors: [],
+      sagaId,
+      status: 'completed',
+      context,
+      completedSteps,
+      compensatedSteps,
     };
   }
 
-  /**
-   * מריץ compensations בסדר הפוך לזה של ה-execute.
-   */
-  private async compensate<TContext extends SagaContext>(
-    executed: SagaStep<TContext>[],
-    ctx: TContext,
-    log: Logger
-  ): Promise<{ compensated: string[]; errors: Array<{ step: string; error: unknown }> }> {
-    const compensated: string[] = [];
-    const errors: Array<{ step: string; error: unknown }> = [];
-
-    for (let i = executed.length - 1; i >= 0; i--) {
-      const step = executed[i]!;
+  private async runStep(
+    step: SagaStep<TContext>,
+    context: TContext,
+    sagaId: string,
+  ): Promise<{ success: true } | { success: false; error: string }> {
+    const maxAttempts = (step.retries ?? 0) + 1;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        log.debug({ step: step.name }, 'compensating');
-        await step.compensate(ctx);
-        compensated.push(step.name);
+        this.logger.debug(
+          { sagaId, step: step.name, attempt },
+          'מריץ step',
+        );
+        await step.execute(context);
+        return { success: true };
       } catch (err) {
-        log.error({ err, step: step.name }, 'compensation failed');
-        errors.push({ step: step.name, error: err });
-        if (!(step.continueOnCompensateError ?? true)) {
-          break;
+        const message = (err as Error).message;
+        this.logger.warn(
+          { sagaId, step: step.name, attempt, err: message },
+          'step נכשל',
+        );
+        if (attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, this.retryDelayMs * attempt));
+        } else {
+          return { success: false, error: message };
         }
       }
     }
-    return { compensated, errors };
+    return { success: false, error: 'unreachable' };
+  }
+
+  private async compensate(
+    completed: string[],
+    context: TContext,
+    sagaId: string,
+  ): Promise<string[]> {
+    const compensated: string[] = [];
+    // הרצה הפוכה - הראשון שהושלם הוא האחרון שמתפצה
+    for (const stepName of [...completed].reverse()) {
+      const step = this.steps.find((s) => s.name === stepName);
+      if (!step?.compensate) continue;
+      try {
+        this.logger.info({ sagaId, step: stepName }, 'מפצה step');
+        await step.compensate(context);
+        compensated.push(stepName);
+      } catch (err) {
+        this.logger.error(
+          { sagaId, step: stepName, err: (err as Error).message },
+          'נכשל compensate - דורש התערבות ידנית',
+        );
+      }
+    }
+    return compensated;
   }
 }

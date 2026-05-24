@@ -1,130 +1,185 @@
+/**
+ * saga.test.ts - בדיקות ל-SagaCoordinator ול-cancelEventSaga.
+ */
+
 import { describe, it, expect, vi } from 'vitest';
 import { SagaCoordinator } from '../src/saga/SagaCoordinator.js';
-import { buildCancelEventSaga, type CancelEventContext, type CancelEventDeps } from '../src/saga/cancelEventSaga.js';
+import {
+  buildCancelEventSaga,
+  type CancelEventServices,
+} from '../src/saga/cancelEventSaga.js';
 
-function makeDeps(overrides: Partial<CancelEventDeps> = {}): CancelEventDeps {
-  return {
-    orderService: {
-      validateCancellation: vi.fn(async () => 'tok-1'),
-      cancel: vi.fn(async () => {}),
-      reactivate: vi.fn(async () => {}),
-    },
-    kitchenService: {
-      cancelPrep: vi.fn(async () => 'k-1'),
-      restorePrep: vi.fn(async () => {}),
-    },
-    logisticsService: {
-      cancelDelivery: vi.fn(async () => 'd-1'),
-      restoreDelivery: vi.fn(async () => {}),
-    },
-    inventoryService: {
-      release: vi.fn(async () => 'r-1'),
-      reReserve: vi.fn(async () => {}),
-    },
-    paymentService: {
-      refund: vi.fn(async () => 'rf-1'),
-      voidRefund: vi.fn(async () => {}),
-    },
-    financeService: {
-      issueCreditNote: vi.fn(async () => 'cn-1'),
-      voidCreditNote: vi.fn(async () => {}),
-    },
-    notificationService: {
-      notifyCancellation: vi.fn(async () => 'n-1'),
-      revertNotification: vi.fn(async () => {}),
-    },
-    ...overrides,
-  };
-}
+const buildMockServices = (
+  overrides: Partial<Record<keyof CancelEventServices, Partial<unknown>>> = {},
+): CancelEventServices => ({
+  auth: {
+    verifyCancelPermission: vi.fn(async () => 'tok-1'),
+    revokeCancellation: vi.fn(async () => {}),
+    ...(overrides.auth as object),
+  },
+  orders: {
+    cancel: vi.fn(async () => {}),
+    restore: vi.fn(async () => {}),
+    ...(overrides.orders as object),
+  },
+  kitchen: {
+    cancelTasks: vi.fn(async () => ['k1', 'k2']),
+    restoreTasks: vi.fn(async () => {}),
+    ...(overrides.kitchen as object),
+  },
+  events: {
+    unschedule: vi.fn(async () => {}),
+    reschedule: vi.fn(async () => {}),
+    ...(overrides.events as object),
+  },
+  logistics: {
+    cancelDelivery: vi.fn(async () => 'del-1'),
+    restoreDelivery: vi.fn(async () => {}),
+    ...(overrides.logistics as object),
+  },
+  inventory: {
+    returnItems: vi.fn(async () => [{ sku: 'A', quantity: 10 }]),
+    reReserveItems: vi.fn(async () => {}),
+    ...(overrides.inventory as object),
+  },
+  hr: {
+    releaseStaff: vi.fn(async () => ['e1']),
+    reAssignStaff: vi.fn(async () => {}),
+    ...(overrides.hr as object),
+  },
+  finance: {
+    issueRefund: vi.fn(async () => 'ref-1'),
+    revokeRefund: vi.fn(async () => {}),
+    ...(overrides.finance as object),
+  },
+});
 
-function makeCtx(): CancelEventContext {
-  return {
-    orderId: 'o-1',
-    eventId: 'e-1',
-    customerId: 'c-1',
-    reason: 'customer request',
-    refundAmount: 500,
-  };
-}
-
-describe('SagaCoordinator + cancelEventSaga', () => {
-  it('runs all 8 steps on success', async () => {
-    const deps = makeDeps();
-    const saga = buildCancelEventSaga(makeCtx(), deps);
-    const coord = new SagaCoordinator();
-
-    const result = await coord.run(saga);
-
-    expect(result.success).toBe(true);
-    expect(result.compensated).toEqual([]);
-    expect(deps.orderService.validateCancellation).toHaveBeenCalled();
-    expect(deps.orderService.cancel).toHaveBeenCalled();
-    expect(deps.kitchenService.cancelPrep).toHaveBeenCalled();
-    expect(deps.logisticsService.cancelDelivery).toHaveBeenCalled();
-    expect(deps.inventoryService.release).toHaveBeenCalled();
-    expect(deps.paymentService.refund).toHaveBeenCalled();
-    expect(deps.financeService.issueCreditNote).toHaveBeenCalled();
-    expect(deps.notificationService.notifyCancellation).toHaveBeenCalled();
-  });
-
-  it('runs compensations in reverse order when a step fails', async () => {
-    const deps = makeDeps({
-      paymentService: {
-        refund: vi.fn(async () => { throw new Error('gateway down'); }),
-        voidRefund: vi.fn(async () => {}),
+describe('SagaCoordinator', () => {
+  it('מריץ saga בהצלחה כשכל ה-steps מצליחים', async () => {
+    type Ctx = { value: number };
+    const saga = new SagaCoordinator<Ctx>('test');
+    saga.addStep({
+      name: 'step1',
+      execute: async (ctx) => {
+        ctx.value += 1;
       },
     });
-    const saga = buildCancelEventSaga(makeCtx(), deps);
-    const coord = new SagaCoordinator();
-
-    const result = await coord.run(saga);
-
-    expect(result.success).toBe(false);
-    expect(result.failedStep).toBe('issueRefund');
-    // צריך לרוץ compensate על השלבים שהצליחו (5 לפני issueRefund)
-    expect(result.compensated).toContain('releaseInventory');
-    expect(result.compensated).toContain('cancelDelivery');
-    expect(result.compensated).toContain('cancelKitchenPrep');
-    expect(result.compensated).toContain('cancelOrder');
-    expect(deps.inventoryService.reReserve).toHaveBeenCalled();
-    expect(deps.logisticsService.restoreDelivery).toHaveBeenCalled();
-    expect(deps.kitchenService.restorePrep).toHaveBeenCalled();
-    expect(deps.orderService.reactivate).toHaveBeenCalled();
-  });
-
-  it('skips refund step if refundAmount is 0', async () => {
-    const deps = makeDeps();
-    const ctx = makeCtx();
-    ctx.refundAmount = 0;
-    const saga = buildCancelEventSaga(ctx, deps);
-    const coord = new SagaCoordinator();
-
-    const result = await coord.run(saga);
-
-    expect(result.success).toBe(true);
-    expect(deps.paymentService.refund).not.toHaveBeenCalled();
-    expect(deps.financeService.issueCreditNote).not.toHaveBeenCalled();
-  });
-
-  it('continues compensation chain even if one compensation fails', async () => {
-    const deps = makeDeps({
-      paymentService: {
-        refund: vi.fn(async () => { throw new Error('first fail'); }),
-        voidRefund: vi.fn(async () => {}),
-      },
-      inventoryService: {
-        release: vi.fn(async () => 'r-1'),
-        reReserve: vi.fn(async () => { throw new Error('inv comp fail'); }),
+    saga.addStep({
+      name: 'step2',
+      execute: async (ctx) => {
+        ctx.value *= 2;
       },
     });
-    const saga = buildCancelEventSaga(makeCtx(), deps);
-    const coord = new SagaCoordinator();
 
-    const result = await coord.run(saga);
+    const result = await saga.run({ value: 5 });
+    expect(result.status).toBe('completed');
+    expect(result.context.value).toBe(12);
+    expect(result.completedSteps).toEqual(['step1', 'step2']);
+  });
 
-    expect(result.success).toBe(false);
-    expect(result.compensationErrors.some((e) => e.step === 'releaseInventory')).toBe(true);
-    // ה-compensation של השלבים האחרים בכל זאת רץ
-    expect(deps.orderService.reactivate).toHaveBeenCalled();
+  it('מבצע compensate בסדר הפוך כשיש כשל', async () => {
+    type Ctx = { trail: string[] };
+    const saga = new SagaCoordinator<Ctx>('test');
+    saga.addStep({
+      name: 'a',
+      execute: async (ctx) => {
+        ctx.trail.push('a-exec');
+      },
+      compensate: async (ctx) => {
+        ctx.trail.push('a-comp');
+      },
+    });
+    saga.addStep({
+      name: 'b',
+      execute: async (ctx) => {
+        ctx.trail.push('b-exec');
+      },
+      compensate: async (ctx) => {
+        ctx.trail.push('b-comp');
+      },
+    });
+    saga.addStep({
+      name: 'c',
+      execute: async () => {
+        throw new Error('crash');
+      },
+    });
+
+    const result = await saga.run({ trail: [] });
+    expect(result.status).toBe('compensated');
+    expect(result.context.trail).toEqual([
+      'a-exec',
+      'b-exec',
+      'b-comp',
+      'a-comp',
+    ]);
+    expect(result.compensatedSteps).toEqual(['b', 'a']);
+  });
+
+  it('מנסה שוב לפי retries', async () => {
+    let attempts = 0;
+    const saga = new SagaCoordinator<{ ok: boolean }>('retry', {
+      retryDelayMs: 1,
+    });
+    saga.addStep({
+      name: 'flaky',
+      retries: 2,
+      execute: async (ctx) => {
+        attempts++;
+        if (attempts < 3) throw new Error('flaky');
+        ctx.ok = true;
+      },
+    });
+
+    const result = await saga.run({ ok: false });
+    expect(result.status).toBe('completed');
+    expect(attempts).toBe(3);
+    expect(result.context.ok).toBe(true);
+  });
+});
+
+describe('cancelEventSaga', () => {
+  it('מריץ את כל 8 השלבים בהצלחה', async () => {
+    const services = buildMockServices();
+    const saga = buildCancelEventSaga(services);
+
+    const result = await saga.run({
+      eventId: 'ev-1',
+      orderId: 'ord-1',
+      customerId: 'cust-1',
+      reason: 'הלקוח ביטל',
+      cancelledBy: 'admin-1',
+    });
+
+    expect(result.status).toBe('completed');
+    expect(result.completedSteps).toHaveLength(8);
+    expect(services.auth.verifyCancelPermission).toHaveBeenCalled();
+    expect(services.finance.issueRefund).toHaveBeenCalled();
+    expect(result.context.refundId).toBe('ref-1');
+  });
+
+  it('מבצע compensate כאשר שלב finance נכשל', async () => {
+    const services = buildMockServices();
+    services.finance.issueRefund = vi.fn(async () => {
+      throw new Error('cardcom down');
+    });
+    const saga = buildCancelEventSaga(services);
+
+    const result = await saga.run({
+      eventId: 'ev-2',
+      orderId: 'ord-2',
+      customerId: 'cust-2',
+      reason: 'מזג אוויר',
+      cancelledBy: 'admin-1',
+    });
+
+    expect(result.status).toBe('compensated');
+    expect(services.hr.reAssignStaff).toHaveBeenCalled();
+    expect(services.inventory.reReserveItems).toHaveBeenCalled();
+    expect(services.logistics.restoreDelivery).toHaveBeenCalledWith('del-1');
+    expect(services.events.reschedule).toHaveBeenCalled();
+    expect(services.kitchen.restoreTasks).toHaveBeenCalledWith(['k1', 'k2']);
+    expect(services.orders.restore).toHaveBeenCalled();
+    expect(services.auth.revokeCancellation).toHaveBeenCalledWith('tok-1');
   });
 });
