@@ -1,2 +1,8 @@
-export { cn } from './lib/utils';
-export { Button, buttonVariants } from './components/button';
+export * from './theme';
+export * from './components/Button';
+export * from './components/Card';
+export * from './components/Screen';
+export * from './components/Text';
+export * from './components/Input';
+export * from './components/Badge';
+export * from './components/SyncBar';
