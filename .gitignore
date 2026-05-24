@@ -1,17 +1,11 @@
 node_modules/
-dist/
-build/
-.env
+data/*.db
+data/*.db-journal
+data/*.json
+data/*.tmp
+package-lock.json
 *.log
+.env
 .DS_Store
-.vscode/
 .idea/
-
-# Database
-*.db
-*.db-journal
-server/prisma/dev.db
-server/prisma/migrations/
-
-# Generated
-.prisma/
+.vscode/
