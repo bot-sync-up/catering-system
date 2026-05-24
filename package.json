@@ -1,19 +1,19 @@
 {
-  "name": "field-ops-monorepo",
-  "private": true,
+  "name": "invoice-ocr-monorepo",
   "version": "0.1.0",
+  "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "packages/*/*",
+    "apps/*"
   ],
   "scripts": {
-    "mobile": "npm --workspace apps/mobile run start",
-    "mobile:android": "npm --workspace apps/mobile run android",
-    "mobile:ios": "npm --workspace apps/mobile run ios",
-    "lint": "npm --workspace apps/mobile run lint",
-    "typecheck": "npm --workspace apps/mobile run typecheck"
+    "build": "npm -ws --if-present run build",
+    "test": "npm -ws --if-present run test",
+    "dev:api": "npm -w apps/api run dev",
+    "dev:web": "npm -w apps/web-verify run dev",
+    "worker": "npm -w @invoice-ocr/integrations-ocr run worker"
   },
-  "devDependencies": {
-    "typescript": "^5.4.5"
+  "engines": {
+    "node": ">=20"
   }
 }
