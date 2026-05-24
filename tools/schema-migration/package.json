@@ -1,0 +1,42 @@
+{
+  "name": "@tools/schema-migration",
+  "version": "0.1.0",
+  "private": true,
+  "description": "כלי מיגרציה ETL מסכמות מודולריות ישנות לסכמה המאוחדת החדשה (packages/db)",
+  "type": "module",
+  "bin": {
+    "schema-migrate": "bin/migrate.ts",
+    "schema-rollback": "bin/rollback.ts"
+  },
+  "scripts": {
+    "migrate": "tsx bin/migrate.ts",
+    "rollback": "tsx bin/rollback.ts",
+    "validate": "tsx bin/validate.ts",
+    "diff": "tsx bin/diff.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.18.0",
+    "cli-progress": "^3.12.0",
+    "commander": "^12.1.0",
+    "decimal.js": "^10.4.3",
+    "fast-levenshtein": "^3.0.0",
+    "kleur": "^4.1.5",
+    "pg": "^8.12.0",
+    "uuid": "^10.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cli-progress": "^3.11.6",
+    "@types/fast-levenshtein": "^0.0.4",
+    "@types/node": "^20.14.0",
+    "@types/pg": "^8.11.6",
+    "@types/uuid": "^10.0.0",
+    "prisma": "^5.18.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
