@@ -1,19 +1,19 @@
 {
-  "name": "aneh-hashoel-monorepo",
-  "version": "0.1.0",
+  "name": "menu-pricing-platform",
+  "version": "1.0.0",
+  "description": "מערכת תפריטים ומחירונים דינמית עם חבילות, אלרגיות, קופונים ונאמנות",
   "private": true,
   "workspaces": [
-    "packages/*",
-    "apps/*"
+    "server",
+    "client"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "dev": "npm run dev --workspace=apps/web"
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w server && npm run build -w client",
+    "test": "npm run test -w server",
+    "start": "npm start -w server"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "@types/node": "^20.11.0"
+    "concurrently": "^9.0.1"
   }
 }
