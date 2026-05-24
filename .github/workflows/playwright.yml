@@ -1,0 +1,135 @@
+name: Playwright E2E
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [web, mobile, portal]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      BASE_URL_WEB: http://localhost:3000
+      BASE_URL_PORTAL: http://localhost:3001
+      BASE_URL_API: http://localhost:4000
+      DATABASE_URL: postgres://test_user:test_pass@localhost:5432/test_db
+      REDIS_URL: redis://localhost:6379/1
+      ADMIN_EMAIL: admin@test.local
+      ADMIN_PASSWORD: Admin!Test123
+      ADMIN_2FA_SECRET: JBSWY3DPEHPK3PXP
+      CUSTOMER_EMAIL: customer@test.local
+      CUSTOMER_PASSWORD: Customer!Test123
+      AGENT_EMAIL: agent@test.local
+      AGENT_PASSWORD: Agent!Test123
+      KITCHEN_EMAIL: kitchen@test.local
+      KITCHEN_PASSWORD: Kitchen!Test123
+      DEFAULT_LOCALE: he-IL
+      TZ: Asia/Jerusalem
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: tests/e2e-playwright/package.json
+
+      - name: Install dependencies
+        working-directory: tests/e2e-playwright
+        run: npm install
+
+      - name: Install Playwright browsers
+        working-directory: tests/e2e-playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for services
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 && redis-cli -h localhost ping && break
+            sleep 2
+          done
+
+      - name: Run migrations (if app present)
+        run: |
+          if [ -f ../../package.json ]; then
+            npm ci --prefix ../../
+            npm run --prefix ../../ migrate || true
+          fi
+        working-directory: tests/e2e-playwright
+        continue-on-error: true
+
+      - name: Start app servers
+        working-directory: tests/e2e-playwright
+        run: |
+          if [ -f ../../package.json ]; then
+            npm run --prefix ../../ start:test &
+            sleep 10
+          fi
+        continue-on-error: true
+
+      - name: Run Playwright tests
+        working-directory: tests/e2e-playwright
+        run: npx playwright test --project=${{ matrix.project }}
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: tests/e2e-playwright/playwright-report
+          retention-days: 14
+
+      - name: Upload JUnit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-${{ matrix.project }}
+          path: tests/e2e-playwright/reports
+          retention-days: 14
+
+      - name: Upload traces & screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traces-${{ matrix.project }}
+          path: tests/e2e-playwright/test-results
+          retention-days: 14

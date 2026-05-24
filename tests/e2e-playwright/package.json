@@ -1,0 +1,25 @@
+{
+  "name": "e2e-playwright",
+  "version": "1.0.0",
+  "description": "Playwright E2E test suite for the CRM/ERP platform (RTL Hebrew)",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "PWDEBUG=1 playwright test",
+    "test:ui": "playwright test --ui",
+    "test:web": "playwright test --project=web",
+    "test:mobile": "playwright test --project=mobile",
+    "test:portal": "playwright test --project=portal",
+    "test:report": "playwright show-report",
+    "codegen": "playwright codegen",
+    "install:browsers": "playwright install --with-deps"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.0.0",
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.0",
+    "typescript": "^5.6.0"
+  }
+}

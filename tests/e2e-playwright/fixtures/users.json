@@ -1,0 +1,52 @@
+{
+  "admin": {
+    "email": "admin@test.local",
+    "password": "Admin!Test123",
+    "role": "admin",
+    "fullName": "מנהל מערכת",
+    "twoFaSecret": "JBSWY3DPEHPK3PXP"
+  },
+  "agent": {
+    "email": "agent@test.local",
+    "password": "Agent!Test123",
+    "role": "sales_agent",
+    "fullName": "סוכן מכירות",
+    "leadIds": ["LEAD-1001", "LEAD-1002"]
+  },
+  "kitchen": {
+    "email": "kitchen@test.local",
+    "password": "Kitchen!Test123",
+    "role": "kitchen_manager",
+    "fullName": "מנהל מטבח"
+  },
+  "payroll": {
+    "email": "payroll@test.local",
+    "password": "Payroll!Test123",
+    "role": "payroll_clerk",
+    "fullName": "פקיד שכר"
+  },
+  "customer": {
+    "email": "customer@test.local",
+    "password": "Customer!Test123",
+    "role": "customer",
+    "fullName": "ישראל ישראלי",
+    "phone": "0501234567",
+    "address": "רחוב הרצל 1, תל אביב"
+  },
+  "school": {
+    "email": "school@test.local",
+    "password": "School!Test123",
+    "role": "customer",
+    "fullName": "בית ספר אהבת תורה",
+    "businessNumber": "514332100",
+    "phone": "036543210"
+  },
+  "employee": {
+    "email": "employee@test.local",
+    "password": "Employee!Test123",
+    "role": "employee",
+    "fullName": "דוד כהן",
+    "tz": "311111114",
+    "hourlyRate": 55
+  }
+}
