@@ -1,110 +1,57 @@
-/* RTL — עברית */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-* { box-sizing: border-box; }
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+}
 
 html, body {
-  margin: 0;
-  padding: 0;
-  font-family: -apple-system, "Segoe UI", "Heebo", "Noto Sans Hebrew", Arial, sans-serif;
-  background: #f7f7fb;
-  color: #1d1d1f;
-  direction: rtl;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Heebo', system-ui, -apple-system, sans-serif;
 }
 
-.topbar {
-  background: #1d4ed8;
-  color: white;
-  padding: 12px 24px;
-  display: flex;
-  align-items: center;
-  gap: 24px;
+/* RTL helpers */
+[dir='rtl'] .rtl-flip { transform: scaleX(-1); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+@layer components {
+  .card {
+    @apply bg-white border border-slate-200 rounded-xl shadow-sm;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  }
+  .btn-ghost {
+    @apply btn text-slate-700 hover:bg-slate-100;
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm
+           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500;
+  }
+  .label {
+    @apply block text-xs font-medium text-slate-600 mb-1;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+  .table-row-hover {
+    @apply hover:bg-slate-50 transition-colors;
+  }
 }
-
-.topbar h1 { margin: 0; font-size: 20px; }
-
-.topbar nav {
-  display: flex;
-  gap: 16px;
-  margin-right: auto; /* RTL: margin-right pushes to left edge */
-}
-
-.topbar nav a {
-  color: white;
-  text-decoration: none;
-  padding: 6px 10px;
-  border-radius: 6px;
-}
-
-.topbar nav a:hover { background: rgba(255,255,255,0.15); }
-
-.main {
-  max-width: 1100px;
-  margin: 24px auto;
-  padding: 0 16px;
-}
-
-.card {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: right;
-}
-
-th, td {
-  padding: 8px 12px;
-  border-bottom: 1px solid #eee;
-}
-
-th { background: #f3f4f6; font-weight: 600; }
-
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.badge-DRAFT { background: #e5e7eb; color: #374151; }
-.badge-PENDING { background: #fef3c7; color: #92400e; }
-.badge-APPROVED { background: #dbeafe; color: #1e40af; }
-.badge-PREPARING { background: #ede9fe; color: #5b21b6; }
-.badge-DELIVERING { background: #dcfce7; color: #166534; }
-.badge-COMPLETED { background: #d1fae5; color: #065f46; }
-.badge-CANCELLED { background: #fee2e2; color: #991b1b; }
-.badge-WAITLISTED { background: #fff7ed; color: #9a3412; }
-
-.btn {
-  display: inline-block;
-  padding: 8px 14px;
-  background: #1d4ed8;
-  color: white;
-  border: 0;
-  border-radius: 6px;
-  cursor: pointer;
-  font: inherit;
-}
-.btn:hover { background: #1e40af; }
-.btn-secondary { background: #6b7280; }
-.btn-danger { background: #dc2626; }
-
-label { display: block; margin: 8px 0 4px; font-weight: 600; font-size: 14px; }
-input, select, textarea {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font: inherit;
-}
-textarea { min-height: 60px; }
-
-.row { display: flex; gap: 12px; }
-.row > * { flex: 1; }
-
-.muted { color: #6b7280; }
