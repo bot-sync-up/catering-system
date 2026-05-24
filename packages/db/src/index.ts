@@ -1,14 +1,28 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from './schema';
+// Re-export Prisma Client and types for consumers across the monorepo.
+import { PrismaClient } from "@prisma/client";
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL is not defined');
+export * from "@prisma/client";
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __prisma: PrismaClient | undefined;
 }
 
-const client = postgres(databaseUrl, { max: 10 });
+/**
+ * Singleton Prisma client. In dev/HMR contexts we cache on globalThis to avoid
+ * exhausting database connections.
+ */
+export const prisma: PrismaClient =
+  globalThis.__prisma ??
+  new PrismaClient({
+    log:
+      process.env.NODE_ENV === "production"
+        ? ["error", "warn"]
+        : ["query", "error", "warn"],
+  });
 
-export const db = drizzle(client, { schema });
-export { schema };
-export type Database = typeof db;
+if (process.env.NODE_ENV !== "production") {
+  globalThis.__prisma = prisma;
+}
+
+export default prisma;
