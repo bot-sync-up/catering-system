@@ -41,6 +41,6 @@
     "@types/uuid": "^9.0.8",
     "@types/cookie-parser": "^1.4.7",
     "supertest": "^6.3.4",
-    "@types/supertest": "^6.0.2"
+    "@types/supertest": "^7.2.0"
   }
 }
