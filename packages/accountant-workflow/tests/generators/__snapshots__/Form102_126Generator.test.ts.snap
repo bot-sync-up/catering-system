@@ -1,0 +1,36 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Form102Generator (ניכויי שכר חודשי) > מסכם נכון ניכויים של כל העובדים 1`] = `
+"<?xml version="1.0" encoding="UTF-8"?>
+<Form102 version="1.0">
+  <Business>
+    <TaxId>514321987</TaxId>
+    <LegalName>קייטרינג בדיקות בע&quot;מ</LegalName>
+  </Business>
+  <Period year="2026" month="4"/>
+  <Totals>
+    <GrossSalary>21500.00</GrossSalary>
+    <IncomeTax>2750.00</IncomeTax>
+    <SocialSecurity>880.00</SocialSecurity>
+    <HealthTax>570.00</HealthTax>
+    <TotalDeductions>4200.00</TotalDeductions>
+  </Totals>
+  <Employees count="2">
+    <Employee id="305112233">
+      <Name>משה כהן</Name>
+      <GrossSalary>12000.00</GrossSalary>
+      <IncomeTax>1800.00</IncomeTax>
+      <SocialSecurity>500.00</SocialSecurity>
+      <HealthTax>320.00</HealthTax>
+    </Employee>
+    <Employee id="306223344">
+      <Name>שרה לוי</Name>
+      <GrossSalary>9500.00</GrossSalary>
+      <IncomeTax>950.00</IncomeTax>
+      <SocialSecurity>380.00</SocialSecurity>
+      <HealthTax>250.00</HealthTax>
+    </Employee>
+  </Employees>
+</Form102>
+"
+`;

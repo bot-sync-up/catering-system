@@ -1,0 +1,45 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Form856Generator > יוצר טופס 856 מאוחד עם חלק א + חלק ב 1`] = `
+"<?xml version="1.0" encoding="UTF-8"?>
+<Form856 version="1.0">
+  <Business>
+    <TaxId>514321987</TaxId>
+    <LegalName>קייטרינג בדיקות בע&quot;מ</LegalName>
+  </Business>
+  <Period year="2025"/>
+  <PartA>
+    <Customers count="2">
+      <Customer seq="1">
+        <TaxId>511111119</TaxId>
+        <Name>אולם אירועים שלום</Name>
+        <TotalAmount>120000.00</TotalAmount>
+        <TotalVat>21600.00</TotalVat>
+      </Customer>
+      <Customer seq="2">
+        <TaxId>512222227</TaxId>
+        <Name>חברת ההסעדה הגדולה</Name>
+        <TotalAmount>85000.00</TotalAmount>
+        <TotalVat>15300.00</TotalVat>
+      </Customer>
+    </Customers>
+    <Totals>
+      <Amount>205000.00</Amount>
+      <Vat>36900.00</Vat>
+    </Totals></PartA>
+  <PartB>
+    <Suppliers count="1">
+      <Supplier seq="1">
+        <TaxId>513333335</TaxId>
+        <Name>ספק ירקות צפוני</Name>
+        <TotalAmount>45000.00</TotalAmount>
+        <TotalVat>8100.00</TotalVat>
+      </Supplier>
+    </Suppliers>
+    <Totals>
+      <Amount>45000.00</Amount>
+      <Vat>8100.00</Vat>
+    </Totals></PartB>
+</Form856>
+"
+`;
