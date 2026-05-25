@@ -25,7 +25,7 @@
     "@opentelemetry/sdk-trace-web": "^1.28.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "@prisma/instrumentation": "^5.22.0",
-    "@sentry/node": "^8.40.0",
+    "@sentry/node": "^10.53.1",
     "@sentry/browser": "^8.40.0",
     "@sentry/profiling-node": "^8.40.0",
     "prom-client": "^15.1.3",
