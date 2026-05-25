@@ -23,7 +23,7 @@
     "@trpc/client": "11.0.0-rc.648",
     "@trpc/next": "11.0.0-rc.648",
     "@trpc/react-query": "11.0.0-rc.648",
-    "@trpc/server": "11.0.0-rc.648",
+    "@trpc/server": "11.17.0",
     "bullmq": "^5.34.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
